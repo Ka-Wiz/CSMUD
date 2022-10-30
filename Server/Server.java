@@ -18,8 +18,8 @@ public class Server
 	{
 		Commands.Initialize();
 		
-		Creation.createWorld();
 		startWorldTime();
+		Creation.createWorld();
 		
 		@SuppressWarnings("resource")
 		ServerSocket ss = new ServerSocket(1234);
@@ -73,7 +73,7 @@ public class Server
 	    		}
 	    		catch(Exception e)
 	    		{
-	    			System.out.println("Exception from scheduled task");
+	    			e.printStackTrace();
 	    		}
 	    		finally
 	    		{
@@ -109,6 +109,7 @@ public class Server
 		catch(Exception e)
 		{
 			System.out.println("Exception from '" + cp.account.controlling.getName() + "', Cmd '" + command + "':\n" + e);
+			e.printStackTrace();
 		}
 		finally
 		{
@@ -152,6 +153,7 @@ public class Server
 		catch(Exception e)
 		{
 			System.out.println("EXCEPTION in createAccount: " + e);
+			e.printStackTrace();
 			return null;
 		}
 		finally
@@ -169,6 +171,7 @@ public class Server
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 			return false;
 		}
 		finally
@@ -224,6 +227,7 @@ public class Server
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 			return null;
 		}
 		finally
@@ -252,6 +256,7 @@ public class Server
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 		}
 		finally
 		{
@@ -268,6 +273,7 @@ public class Server
 		}
 		catch (IOException e)
 		{
+			e.printStackTrace();
 		}
 	}
 	public static void printToRoom(String msg, Object room)
@@ -280,7 +286,7 @@ public class Server
 		}
 		catch (IOException e)
 		{
-			System.out.println("an exception " + e);
+			e.printStackTrace();
 		}
 	}
 	public static void printToRoomAll(String msg, Object room)
@@ -293,7 +299,7 @@ public class Server
 		}
 		catch (IOException e)
 		{
-			System.out.println("an exception " + e);
+			e.printStackTrace();
 		}
 	}
 	

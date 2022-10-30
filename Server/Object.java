@@ -120,7 +120,7 @@ public class Object
 				decorators.put(d, tmp);
 				return d.cast(tmp);
 			}
-			catch(Exception e) { return null;}
+			catch(Exception e) { e.printStackTrace(); return null;}
 		else
 			return null;
 	}
@@ -135,7 +135,7 @@ public class Object
 				decorators.put(d.getClass(), d);
 				return (D)d;
 			}
-			catch(Exception e) { return null;}		
+			catch(Exception e) { e.printStackTrace(); return null;}		
 		else
 			return null;
 	}

@@ -16,7 +16,7 @@ public class RoomConnection extends Decorator
 		{
 			public void invoke()
 			{
-				Object dest = connectionTo.getDecorator(RoomConnection.class) == null ? connectionTo.containedIn : connectionTo;
+				Object dest = connectionTo.getDecorator(RoomConnection.class) == null ? connectionTo : connectionTo.containedIn;
 				Object sender = Commands.sender;
 				Movement mv = null;
 				for(Object o : sender.contents)
