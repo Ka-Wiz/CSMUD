@@ -84,7 +84,7 @@ public class Dialog extends Decorator
 			{
 				if(talkingTo != null && talkingTo.equals(Commands.sender))
 				{
-					String s = Commands.args[obj.getName().split(" ").length].toLowerCase();
+					String s = Commands.args[0].toLowerCase();
 					DialogNode next = curNode.children.get(s);
 					if(next != null)
 					{

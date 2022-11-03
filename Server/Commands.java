@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import Server.Decorators.PlayerControlled;
+import Server.Decorators.*;
 
 
 public class Commands
@@ -12,8 +12,9 @@ public class Commands
 	static Map<String, Command> commandStrings = new LinkedHashMap<String, Command>();
 	static Map<String, String> commandDescriptions = new LinkedHashMap<String, String>();
 	
-	static public Object sender;
-	static public String[] args;
+	public static Object sender;
+	public static String command;
+	public static String[] args;
 	
 	static void Initialize()
 	{
@@ -22,18 +23,18 @@ public class Commands
 			public void invoke()
 			{
 				if(Server.checkDebug(Server.DBG_CMD))
-					PrintDebug("inside look");
+					printDebug("inside look");
 
 				Object target = getTarget();
 				
 				if(Server.checkDebug(Server.DBG_CMD))
-					PrintDebug("got target " + target);
+					printDebug("got target " + target);
 				
 				String str = "";
 				if(target == null)
 				{
 					if(Server.checkDebug(Server.DBG_CMD))
-						PrintDebug("target was null");
+						printDebug("target was null");
 					
 					if(args.length == 0)
 					{
@@ -48,7 +49,7 @@ public class Commands
 				}
 				else
 					if(Server.checkDebug(Server.DBG_CMD))
-						PrintDebug("target wasnt null");
+						printDebug("target wasnt null");
 				
 				printSelf(str + target.buildDescription());
 			}
@@ -59,7 +60,7 @@ public class Commands
 			public void invoke()
 			{
 				if(Server.checkDebug(Server.DBG_CMD))
-					PrintDebug("inside think");
+					printDebug("inside think");
 				
 				Object target = getTarget();
 				
@@ -162,18 +163,176 @@ public class Commands
 			}
 		});
 	}
-	
 	private static void createCommand(String text, String desc, Command cmd)
 	{
 		commandStrings.put(text, cmd);
 		commandDescriptions.put(text, desc);
 	}
 	
+	public static void parseCommand(Object sender, String input)
+	{
+		boolean debug = Server.checkDebug(Server.DBG_CMD);
+		
+		if(input.length() == 0)
+		{
+			printSelf("You do nothing. It is strangely unfulfilling.");
+			return;
+		}
+		
+		if(debug)
+			System.out.println("parsing command " + input);
+		
+		String[] words = input.split(" ", 2);
+		
+		if(words[0].equals("r"))
+			input = input.replaceFirst("r", sender.getDecorator(PlayerControlled.class).lastCommand);
+		
+		words = input.split(" ");
+		Commands.command = words[0];
+		
+		Commands.sender = sender;
+		Commands.args = Arrays.copyOfRange(words, 1, words.length);
+		
+		Object targ = getTarget();
+		
+		if(!words[0].equals("r")) // we have to split up the r stuff because r depends on valid target
+		{
+			String last = targ != null ? String.join(" ", command, words[1]) : command;
+			sender.getDecorator(PlayerControlled.class).lastCommand = last; // eclipse breaks if we don't use last lmao
+		}
+		
+		Command cmd;
+		boolean found = false;
+		
+		if(targ != null) // prioritize specific commands/general command overrides
+		{
+			if((cmd = targ.commandStrings.get(command)) != null)
+			{
+				if(debug)
+					System.out.println(targ.getName() + " recognized " + command + " invoking with " + (args.length-1) + " args" );
+				
+				found = true;
+			}
+			else
+			{
+				for(var entry : targ.getDecorators().entrySet())
+					if((cmd = entry.getValue().commandStrings.get(command)) != null)
+					{
+						if(debug)
+							System.out.println(targ.getName() + " decorator " + entry.getKey() + " recognized " + command + " invoking with " + (args.length-1) + " args" );
+						
+						found = true;
+						break;
+					}
+			}
+			
+			if(found)
+			{
+				Commands.args = Arrays.copyOfRange(words, 2, words.length);
+				cmd.invoke();
+				
+				if(debug)
+					System.out.println("specific cmd " + command + " complete");
+			}
+		}
+		
+		if(!found)
+		{
+			cmd = commandStrings.get(command);
+			
+			if(cmd != null)
+			{
+				if(debug)
+					System.out.println("generic cmd " + command + ", invoking with " + args.length + " args" );
+				
+				cmd.invoke();
+				
+				if(debug)
+					System.out.println("cmd " + command + " complete");
+			}
+			else
+			{
+				if(targ == null)
+					printSelf("You don't know how to " + command + ".");
+				else
+					printSelf("You can't think of a way to " + command + " a " + targ.getName() + ".");
+			}
+		}
+		
+		Commands.sender = null;
+		Commands.command = null;
+		Commands.args = null;
+		
+//		Command cmd = commandStrings.get(words[0]);
+//		if(cmd != null)
+//		{
+//			if(targ != null)
+//			{
+//				if(debug)
+//					System.out.println("specific cmd " + words[0] + " on " + words[1] + ", invoking with " + args.length + " args" );
+//				
+//				Command scmd = targ.getCommand(words[0]);
+//				if(scmd != null)
+//				{
+//					scmd.invoke();
+//					return;
+//				}
+//			}
+//			
+//			if(debug)
+//				System.out.println("generic cmd " + words[0] + ", invoking with " + args.length + " args" );
+//			
+//			cmd.invoke();
+//			
+//			if(debug)
+//				System.out.println("cmd " + words[0] + " complete");
+//		}
+//		else
+//		{
+//			if(debug)
+//				System.out.println("checking for specific");
+//			
+//			if(targ != null)
+//			{
+//				cmd = targ.commandStrings.get(words[0]);
+//				
+//				if(cmd != null)
+//				{
+//					if(debug)
+//						System.out.println(targ.getName() + " recognized " + words[0] + " invoking with " + (args.length-1) + " args" );
+//					
+//					Commands.args = Arrays.copyOfRange(words, 2, words.length);
+//					cmd.invoke();
+//				}
+//				else
+//				{
+//					boolean invoked = false;
+//					for(var entry : targ.getDecorators().entrySet())
+//					{
+//						cmd = entry.getValue().commandStrings.get(words[0]);
+//						if(cmd != null)
+//						{
+//							if(debug)
+//								System.out.println(targ.getName() + " decorator " + entry.getKey() + " recognized " + words[0] + " invoking with " + (args.length-1) + " args" );
+//							
+//							Commands.args = Arrays.copyOfRange(words, 2, words.length);
+//							cmd.invoke();
+//							invoked = true;
+//							break;
+//						}
+//					}
+//					
+//					if(!invoked)
+//						printSelf("You can't think of a way to " + words[0] + " a " + targ.getName() + ".");
+//				}
+//			}
+//			else
+//				printSelf("You don't know how to " + words[0] + ".");
+//		}
+	}
+	
 	private static Object getTarget()
 	{
-		if(Server.checkDebug(Server.DBG_CMD))
-			System.out.println("in getTarget(), idx 0 and " + args.length + " length");
-		
 		if(args.length > 0)
 		{
 			if(args[0].equals("self"))
@@ -196,9 +355,9 @@ public class Commands
 
 		return null;
 	}
-	// helper function in case i change context scope later, ie "zones" where objects not in same room are visible to each other
 	private static Object getTargetFromContext(Object o, String s)
 	{
+		// helper function in case context scope changes later, ie "zones" where objects not in same room are visible to each other
 		System.out.println("checking for object " + s);
 		Object found = o.containedIn.getContainedObjectFromString(s);
 		if(found == null)
@@ -208,112 +367,12 @@ public class Commands
 		return found;
 	}
 
-	
-	public static void parseCommand(Object sender, String input)
-	{
-		if(!input.equals("r"))
-			sender.getDecorator(PlayerControlled.class).lastCommand = input;
-		
-		if(input.length() == 0)
-		{
-			printSelf("You do nothing. It is strangely unfulfilling.");
-			return;
-		}
-		
-		if(Server.checkDebug(Server.DBG_CMD))
-			System.out.println("parsing command " + input);
-		
-		String[] words = input.split(" ");
-		
-		Commands.sender = sender;
-		Commands.args = Arrays.copyOfRange(words, 1, words.length);
-		
-		if(Server.checkDebug(Server.DBG_CMD))
-			System.out.println("sender set");
-		
-		Command cmd = commandStrings.get(words[0]);
-		
-		if(Server.checkDebug(Server.DBG_CMD))
-			System.out.println("general cmd lookup says " + cmd);
-		
-		if(cmd != null)
-		{
-			Object targ = getTarget();
-			if(targ != null)
-			{
-				if(Server.checkDebug(Server.DBG_CMD))
-					System.out.println("specific cmd " + words[0] + " on " + words[1] + " recognized with " + (words.length-1) + " args" );
-				
-				Command scmd = targ.getCommand(words[0]);
-				if(scmd != null)
-				{
-					scmd.invoke();
-					return;
-				}
-			}
-			
-			if(Server.checkDebug(Server.DBG_CMD))
-				System.out.println("command " + words[0] + " recognized, invoking with " + (words.length-1) + " args" );
-			
-			cmd.invoke();
-			
-			if(Server.checkDebug(Server.DBG_CMD))
-				System.out.println("command " + words[0] + " invoked");
-		}
-		else
-		{
-			if(Server.checkDebug(Server.DBG_CMD))
-				System.out.println("checking for specific");
-			
-			Object targ = getTarget();
-			if(targ != null)
-			{
-				cmd = targ.commandStrings.get(words[0]);
-				
-				if(cmd != null)
-				{
-					if(Server.checkDebug(Server.DBG_CMD))
-						System.out.println(targ.getName() + " recognized " + words[0] + " invoking with " + (args.length-1) + " args" );
-					
-					Commands.args = Arrays.copyOfRange(words, 2, words.length);
-					cmd.invoke();
-				}
-				else
-				{
-					boolean invoked = false;
-					for(var entry : targ.getDecorators().entrySet())
-					{
-						cmd = entry.getValue().commandStrings.get(words[0]);
-						if(cmd != null)
-						{
-							if(Server.checkDebug(Server.DBG_CMD))
-								System.out.println(targ.getName() + " decorator " + entry.getKey() + " recognized " + words[0] + " invoking with " + (args.length-1) + " args" );
-							
-							Commands.args = Arrays.copyOfRange(words, 2, words.length);
-							cmd.invoke();
-							invoked = true;
-							break;
-						}
-					}
-					
-					if(!invoked)
-						printSelf("You can't think of a way to " + words[0] + " a " + targ.getName() + ".");
-				}
-			}
-			else
-			{
-				printSelf("You don't know how to " + words[0] + ".");
-			}
-		}
-	}
-	
 	static void printSelf(String str)
 	{
 		if(str.length() > 0)
 			Server.printToClient(str.strip() + "\n\n");
 	}
-	
-	static void PrintDebug(String str)
+	static void printDebug(String str)
 	{
 		if(str.length() > 0)
 			System.out.println("DEBUG: " + str);

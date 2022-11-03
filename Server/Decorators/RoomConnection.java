@@ -33,24 +33,24 @@ public class RoomConnection extends Decorator
 				}	
 				
 				obj.printSelf("You " + mv.moveString + " " + moveType + " the " + obj.getName() + " with your " + mv.obj.getName() + ".");
-				obj.printRoom(Commands.sender.getName() + " " + mv.moveString + "s " + moveType + " the " + obj.getName() + " to " + dest.getName() + ".");
+				obj.printRoom(sender.getName() + " " + mv.moveString + "s " + moveType + " the " + obj.getName() + " to " + dest.getName() + ".");
 				
-				String arrive = Commands.sender.getName() + " arrives from ";
+				String arrive = sender.getName() + " arrives from ";
 				if(connectionTo.getDecorator(RoomConnection.class) != null)
 				{
 					arrive += connectionTo.getName() + " to " + obj.containedIn.getName() + ".";
-					Commands.sender.storeIn(connectionTo.containedIn);
+					sender.storeIn(connectionTo.containedIn);
 					obj.printRoom(arrive, connectionTo.containedIn);
 				}
 				else
 				{
 					arrive += obj.containedIn.getName() + ".";
-					Commands.sender.storeIn(connectionTo);
+					sender.storeIn(connectionTo);
 					obj.printRoom(arrive, connectionTo);
 				}
 				
-				Commands.parseCommand(Commands.sender, "look");
-				Commands.parseCommand(Commands.sender, "think");
+				Commands.parseCommand(sender, "look");
+				Commands.parseCommand(sender, "think");
 			}
 		});
 		
