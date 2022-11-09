@@ -41,19 +41,6 @@ public class Object
 		for(var entry : decorators.entrySet())
 			desc += entry.getValue().buildDescription();
 		
-//		if(contents.size() > 0)
-//		{
-//			String interact = "You know you can interact with:\n";
-//			
-//			for(int i = 0; i < contents.size(); ++i)
-//				interact += contents.get(i).name + "\n";
-//			
-//			desc += FormatBlock(interact);
-//		}
-		
-//		if(commandStrings.size() > 0)
-//			desc += FormatBlock(GetCommands());
-		
 		return FormatBlock(desc);
 	}
 	

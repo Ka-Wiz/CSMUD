@@ -34,46 +34,10 @@ abstract public class Decorator
 		
 		if(commandStrings.keySet().size() > 0)
 		{
-//			cmd = "\nYou know you can:\n";
 			for(String s : commandStrings.keySet())
 				cmd += s + ", ";
-			
-//			cmd = cmd.substring(0, cmd.length() - 2);
-			
-//			cmd += "\n";
 		}
 		
 		return cmd;
 	}
-}
-
-class PlayerInfo extends Decorator
-{
-	
-}
-
-class M64Stats extends Decorator
-{
-	int hp = 6, lives = 3;
-	Object respawnRoom;
-	
-	M64Stats(Object spawn)
-	{
-		respawnRoom = spawn;
-	}
-	
-	void Damage(int dmg)
-	{
-		hp -= dmg;
-		
-		if(hp <= 0)
-		{
-			
-		}
-	}
-}
-
-class CombatStats extends Decorator
-{
-	int hp;
 }

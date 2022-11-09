@@ -33,7 +33,7 @@ public class Writeable extends Decorator
 					obj.printSelf("You grab a " + writingTool + " and scribble with a poetic flourish, \'" + str + "\'");
 					obj.printRoom(Commands.sender.getName() + " scribbles something on the " + obj.getName());
 					
-					if(obj.getName().equals("deathnote"))
+					if(obj.getName().equals("death notebook")) // just some fun temporary code for testing
 					{
 						Server.schedule(new Server.ScheduleTask() {
 									public void run()

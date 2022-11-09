@@ -27,11 +27,9 @@ public class Client
 
 		Thread sendMessage = new Thread(new Runnable()
 		{
-			@Override
 			public void run()
 			{
 				while (!terminated)
-				{
 					try
 					{
 						dos.writeUTF(scn.nextLine());
@@ -41,17 +39,14 @@ public class Client
 					{
 						e.printStackTrace();
 					}
-				}
 			}
 		});
 		
 		Thread readMessage = new Thread(new Runnable()
 		{
-			@Override
 			public void run()
 			{
 				while (true)
-				{
 					try
 					{
 						System.out.print(dis.readUTF());
@@ -65,7 +60,6 @@ public class Client
 						terminated = true;
 						return;
 					}
-				}
 			}
 		});
 

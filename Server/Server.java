@@ -53,7 +53,7 @@ public class Server
 	{
 		private TimerTask tt;
 		public void setTimerTask(TimerTask t) { tt = t; }
-		public boolean isScheduled() { return tt != null; }
+		public boolean isScheduled() { return tt != null; } // no guarantee tt is nulled after running, but mostly used for resetting periodic tasks via cancel()
 		public void run() {};
 		public void cancel() { tt.cancel(); tt = null; }
 	}
@@ -210,7 +210,6 @@ public class Server
 						
 						player.getDecorator(PlayerControlled.class).client = account.client = cp;
 						
-//						printToClient("Login Success! Welcome, " + name + "!");
 						printToClient("A swirling flash of multicolored light heralds your arrival into the world.");
 						printToRoom(player.getName() + " appears in a swirling flash of multicolored light.", player.containedIn);
 						
@@ -264,8 +263,6 @@ public class Server
 			
 			printToRoom(player.getName() + " disappears in a flash of multicolored light, leaving emptiness behind.", player.containedIn);
 			player.storeIn(world);
-			
-			//player.StoreIn(player);
 		}
 		catch(Exception e)
 		{
@@ -289,14 +286,14 @@ public class Server
 			e.printStackTrace();
 		}
 	}
-	public static void printOther(String msg, Object other)
+	public static void printToOther(String msg, Object other)
 	{
 		PlayerControlled pc = other.getDecorator(PlayerControlled.class);
 		if(pc != null)
 		{
 			try
 			{
-				pc.client.dos.writeUTF(msg.strip() + "\n\n"); // broken for some reason, client is null?
+				pc.client.dos.writeUTF(msg.strip() + "\n\n");
 			}
 			catch (IOException e)
 			{
@@ -334,7 +331,6 @@ public class Server
 	public static void broadcast(String msg)
 	{
 		for(ClientProcess cp : clients)
-		{
 			try
 			{
 				cp.dos.writeUTF(msg.strip() + "\n\n");
@@ -343,12 +339,10 @@ public class Server
 			{
 				e.printStackTrace();
 			}
-		}
 	}
 	public static void broadcast(String msg, Object toIgnore)
 	{
 		for(ClientProcess cp : clients)
-		{
 			if(cp.account.controlling != toIgnore)
 				try
 				{
@@ -358,7 +352,6 @@ public class Server
 				{
 					e.printStackTrace();
 				}
-		}
 	}
 	
 	// DEBUG ============================

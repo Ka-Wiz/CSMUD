@@ -8,7 +8,7 @@ import Server.Object;
 public class RoomConnection extends Decorator
 {
 	public Object connectionTo = null; // should be another RoomConnection 99% of the time
-	public String moveType; // adverb used when traversing. "You walk out/down/through/across" etc
+	public String moveAdverb; // "You walk: out/down/through/across" etc
 	
 	protected void Initialize()
 	{
@@ -32,8 +32,8 @@ public class RoomConnection extends Decorator
 					return;
 				}	
 				
-				obj.printSelf("You " + mv.moveString + " " + moveType + " the " + obj.getName() + " with your " + mv.obj.getName() + ".");
-				obj.printRoom(sender.getName() + " " + mv.moveString + "s " + moveType + " the " + obj.getName() + " to " + dest.getName() + ".");
+				obj.printSelf("You " + mv.moveString + " " + moveAdverb + " the " + obj.getName() + " with your " + mv.obj.getName() + ".");
+				obj.printRoom(sender.getName() + " " + mv.moveString + "s " + moveAdverb + " the " + obj.getName() + " to " + dest.getName() + ".");
 				
 				String arrive = sender.getName() + " arrives from ";
 				if(connectionTo.getDecorator(RoomConnection.class) != null)

@@ -105,48 +105,6 @@ public class Creation
 		
 		connectRooms(m, mn, "branch north", "exit tunnel", "down", "up");
 		connectRooms(m, ms, "branch south", "exit tunnel", "down", "up");
-		
-//		Object cj = createHuman(java2);
-//		cj.setName("Captain Josh");
-//		cj.setDescription("An imposing figure dressed in a slick black uniform with silver trim and golden shoulder pads with dangling tassels. He "
-//				+ "glances at you with a stern expression, as if contemplating ordering you to organize the cargo hold. The large captain's hat atop his finely cropped "
-//				+ "and slicked hair leaves his authority on this vessel in no doubt.");
-//		
-//		Dialog d = cj.addDecorator(Dialog.class);
-//		d.createNode("hello", "Welcome onboard the UIS Enterprise, cadet. We're on a 4-year mission to [explore] the galaxy, and we could use your [help] to do it.");
-//		d.createNode("explore", "Yes, discover new worlds, new life, all that jazz. In fact you've come at an opportune time, as you can see we've just arrived in orbit "
-//									+ "around a new [world].");
-//		d.createNode("world", "That little ball of spinach you see below us is the world [Antaeon]. Mysterious place, never been charted before. Until now, of course.");
-//		d.createNode("antaeon", "We've received some strange stories from ships passing through this sector. Anomalous events, time skips, disappearances, you name it. We've "
-//									+ "been sent to investigate, and that's where your [help] comes in.");
-////		d.createNode("help", "You voulenteer as part of a new scouting regiment on Antaeon. You land on the planet after a month's journey. When you step foot on the planet "
-////				+ "you see small yellow bugs swarming the ground. You start to feel dizzy and ill. You are suddenly back on the ship, but the hourglass bugs have now covered every inch of your flesh."
-////				+ "Suddenly, you are back in orbit, the bugs are chewing through your eyes. Time itself is ending. There is nothing you can do but call for [help].");
-//		d.createNode("help", "Yes, I've put together an away team that is currently on the planet's surface. You're a promising young cadet and they could use your help.");
-//		
-//		Object bob = new Object(board, "bob-omb battlefield", "the middle of some sort of brightly-colored warzone. Nearby on a concrete platform two pink bomb-people are "
-//				+ "firing large bubbles out of a cannon haphazardly. There is a path leading to an angled wooden bridge "
-//				+ "going upward, and a very red canyon beside it. In the distance you can see a huge mountain and... a floating "
-//				+ "island?! Maybe you just slammed your head into the board...\n\nOne of the pink bombs approaches you...");
-//		bob.addDecorator(StringProperty.class).str = "a curious scene of 3 marching bombs against a cloudy blue sky";
-//		
-//		Object uhbeh = new Object(hub, "the UHB east hallway", "the UHB east hallway. At the north end you can see the open space of the staircase, while at the other "
-//				+ "the hallway ends in a few computery rooms and a right turn, heading west.");
-//		
-//		connectRooms(s, uhbeh, "doorway", "lab doorway", "out", "through");
-//		connectRooms(java2, uhbeh, "doorway", "java 2 doorway", "out", "through");
-//		
-//		Object uhbstair = new Object(hub, "the UHB staircase", "the UHB staircase area, second floor. The blue carpeting makes your footsteps feel soft. There is a large window "
-//				+ "with a grand view of the UIS campus hub, with PAC, the library, and the biology building surrounding the "
-//				+ "lovely pillared fountain that is currently shooting water jets in intricate patterns.\n\n"
-//				+ "Inside, there are connections to two hallways, and stairs leading both up to the third floor and down to "
-//				+ "the first. There are also some couches and tables near the window.");
-//		
-//		connectRooms(uhbeh, uhbstair, "hall north", "hall south", "down");
-//		
-//		Object uhbsh = new Object(hub, "the UHB south hallway", "the UHB south hallway, second floor.");
-//		
-//		connectRooms(uhbeh, uhbsh, "hall west", "hallway", "down");
 	}
 	
 	public static Object createPlayer(Object storeIn, String name, ClientProcess cp)
@@ -228,11 +186,11 @@ public class Creation
 	{
 		Object c1 = new Object(r1, name1);
 		RoomConnection rc1 = c1.addDecorator(RoomConnection.class);
-		rc1.moveType = type1;
+		rc1.moveAdverb = type1;
 		
 		Object c2 = new Object(r2, name2 == "" ? name1 : name2);
 		RoomConnection rc2 = c2.addDecorator(RoomConnection.class);
-		rc2.moveType = type2;
+		rc2.moveAdverb = type2;
 		
 		rc1.connectionTo = c2;
 		rc2.connectionTo = c1;

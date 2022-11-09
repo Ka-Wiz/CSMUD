@@ -17,17 +17,6 @@ public class Holder extends Decorator
 	{
 		String desc = "";
 		
-//		if(writing == "")
-//			desc += "\nIt is currently blank.\n";
-//		else
-//			desc += "\nIt currently reads: \"" + writing + "\"\n";
-//		
-//		if(openTo != null)
-//		{
-//			StringProperty sp = openTo.getDecorator(StringProperty.class);
-//			desc += "Underneath is a rippling surface depicting " + sp.str + ".";
-//		}
-		
 		return desc;
 	}
 }
