@@ -12,6 +12,8 @@ import java.util.TimerTask;
 import java.util.Vector;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import Server.Decorators.PlayerControlled;
+
 public class Server
 {
 	public static void main(String[] args) throws IOException
@@ -47,6 +49,43 @@ public class Server
 	public static LocalTime lastWorldTick;
 	
 	private static Timer timer = new Timer();
+	public static class ScheduleTask
+	{
+		private TimerTask tt;
+		public void setTimerTask(TimerTask t) { tt = t; }
+		public boolean isScheduled() { return tt != null; }
+		public void run() {};
+		public void cancel() { tt.cancel(); tt = null; }
+	}
+	public static void schedule(ScheduleTask task, float delay)
+	{
+		TimerTask tt = new TimerTask() {
+	        public void run()
+	        {
+	        	try
+	    		{
+	    			lock.writeLock().lock();
+	    			task.run();
+	    		}
+	    		catch(Exception e)
+	    		{
+	    			e.printStackTrace();
+	    		}
+	    		finally
+	    		{
+	    			lock.writeLock().unlock();
+	    		}
+	        }
+	    };
+	    task.setTimerTask(tt);
+	    
+	    timer.schedule(tt, (long)(delay * 1000.f));
+	}
+	public static void schedule(ScheduleTask task, LocalTime time)
+	{
+		float seconds = (Duration.between(worldTime, time).toMinutes() / worldTickMinutes) * worldTick - Duration.between(lastWorldTick, LocalTime.now()).toSeconds();
+		schedule(task, seconds);
+	}
 	private static void startWorldTime()
 	{
 		worldTime = LocalTime.of(7, 0);
@@ -60,35 +99,6 @@ public class Server
 			}
 		}, worldTick);
 	}
-	public static void schedule(ScheduleTask task, float delay)
-	{
-		TimerTask tt = new TimerTask() {
-	        public void run()
-	        {
-	        	try
-	    		{
-	    			lock.writeLock().lock();
-	    			
-	    			task.run();
-	    		}
-	    		catch(Exception e)
-	    		{
-	    			e.printStackTrace();
-	    		}
-	    		finally
-	    		{
-	    			lock.writeLock().unlock();
-	    		}
-	        }
-	    };
-	    
-	    timer.schedule(tt, (long)(delay * 1000.f));
-	}
-	public static void schedule(ScheduleTask task, LocalTime time)
-	{
-		float seconds = (Duration.between(worldTime, time).toMinutes() / worldTickMinutes) * worldTick - Duration.between(lastWorldTick, LocalTime.now()).toSeconds();
-		schedule(task, seconds);
-	}	
 	
 	// CLIENT HANDLING ==================
 	private static ClientProcess curClient;
@@ -195,9 +205,10 @@ public class Server
 				{
 					if(account.client == null)
 					{
-						account.client = cp;
 						Object player = account.controlling;
 						player.storeIn(player.wasIn);
+						
+						player.getDecorator(PlayerControlled.class).client = account.client = cp;
 						
 //						printToClient("Login Success! Welcome, " + name + "!");
 						printToClient("A swirling flash of multicolored light heralds your arrival into the world.");
@@ -235,22 +246,24 @@ public class Server
 			lock.writeLock().unlock();
 		}
 	}
-	public static void logout(ClientProcess cp)
+	public static void logout(ClientProcess cp, boolean fail)
 	{
 		try
 		{
 			lock.writeLock().lock();
 			
-			Server.curClient = cp;
+			if(!fail)
+			{
+				Server.curClient = cp;
+				printToClient("Your view of the world quickly dissipates to nothing as you are enveloped by a multicolored light.");
+			}
+			
 			Object player = cp.account.controlling;
+			player.getDecorator(PlayerControlled.class).client = cp.account.client = null;
+			clients.remove(cp);
 			
 			printToRoom(player.getName() + " disappears in a flash of multicolored light, leaving emptiness behind.", player.containedIn);
-			printToClient("Your view of the world quickly dissipates to nothing as you are enveloped by a multicolored light.");
-			
 			player.storeIn(world);
-			
-			cp.account.client = null;
-			clients.remove(cp);
 			
 			//player.StoreIn(player);
 		}
@@ -274,6 +287,21 @@ public class Server
 		catch (IOException e)
 		{
 			e.printStackTrace();
+		}
+	}
+	public static void printOther(String msg, Object other)
+	{
+		PlayerControlled pc = other.getDecorator(PlayerControlled.class);
+		if(pc != null)
+		{
+			try
+			{
+				pc.client.dos.writeUTF(msg.strip() + "\n\n"); // broken for some reason, client is null?
+			}
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
 		}
 	}
 	public static void printToRoom(String msg, Object room)

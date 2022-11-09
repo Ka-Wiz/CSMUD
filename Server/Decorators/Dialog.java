@@ -20,17 +20,33 @@ import Server.Object;
 
 public class Dialog extends Decorator
 {
+	public static class DialogNode
+	{
+		String keyword, message;
+		HashMap<String, DialogNode> children = new HashMap<>();
+		DialogCode code;
+		
+		DialogNode(String key, String msg, DialogCode cod) { keyword = key; message = msg; code = cod;}
+		DialogNode(String key, String msg) { keyword = key; message = msg; }
+	}
+	
+	public class DialogCode
+	{
+		public void enter() {}
+		public void exit() {}
+	}
+
 	// data for tree in general
 	DialogNode root;
 	HashMap<String, ArrayList<DialogNode>> keywordToParents = new HashMap<>();
 	HashMap<String, DialogNode> keywordToNode = new HashMap<>();
 	
 	// state data for conversation in progress
-	Object talkingTo;
+	public Object talkingTo;
 	DialogNode curNode, lastNode;
 	HashMap<String, DialogNode> observedKeywords;
 	
-	public void createNode(String keyword, String msg)
+	public void createNode(String keyword, String msg, DialogCode code)
 	{
 		if(keywordToNode.containsKey(keyword))
 		{
@@ -38,7 +54,7 @@ public class Dialog extends Decorator
 			return;
 		}
 			
-		DialogNode newNode = new DialogNode(keyword, msg);
+		DialogNode newNode = new DialogNode(keyword, msg, code);
 		keywordToNode.put(keyword, newNode);
 		
 		Matcher m = Pattern.compile("\\[(.*?)\\]").matcher(msg);
@@ -67,6 +83,10 @@ public class Dialog extends Decorator
 				p.children.put(keyword, newNode);		// add this new node as child to its appropriate parents
 		}  
 	}
+	public void createNode(String keyword, String msg)
+	{
+		createNode(keyword, msg, null);
+	}
 	public void attachCode(String keyword, DialogCode code)
 	{
 		DialogNode n = keywordToNode.get(keyword);
@@ -88,6 +108,12 @@ public class Dialog extends Decorator
 					DialogNode next = curNode.children.get(s);
 					if(next != null)
 					{
+						if(curNode.code != null)
+							curNode.code.exit();
+						
+						if(next.code != null)
+							next.code.enter();
+						
 						say(next.message);
 						lastNode = curNode;
 						curNode = next;
@@ -116,17 +142,3 @@ public class Dialog extends Decorator
 	}
 }
 
-class DialogNode
-{
-	String keyword, message;
-	HashMap<String, DialogNode> children = new HashMap<>();
-	DialogCode code;
-	
-	DialogNode(String key, String msg) { keyword = key; message = msg;}
-}
-
-interface DialogCode
-{
-	void enter();
-	void exit();
-}

@@ -6,7 +6,6 @@ import Server.Command;
 import Server.Commands;
 import Server.Decorator;
 import Server.Object;
-import Server.ScheduleTask;
 import Server.Server;
 
 public class Writeable extends Decorator
@@ -36,7 +35,7 @@ public class Writeable extends Decorator
 					
 					if(obj.getName().equals("deathnote"))
 					{
-						Server.schedule(new ScheduleTask() {
+						Server.schedule(new Server.ScheduleTask() {
 									public void run()
 									{
 										Server.broadcast("JoeNPC shits himself horrendously.");

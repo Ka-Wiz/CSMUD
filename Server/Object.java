@@ -69,14 +69,9 @@ public class Object
 		if(c != null)
 			return c;
 		else
-		{
 			for(var entry : decorators.entrySet())
-			{
-				c = entry.getValue().commandStrings.get(commandName);
-				if(c != null)
+				if((c = entry.getValue().commandStrings.get(commandName)) != null)
 					return c;
-			}
-		}
 		
 		return null;
 	}
@@ -147,6 +142,15 @@ public class Object
 		
 		return d.cast(tmp);
 	}
+	public <D extends Decorator> D findDecoratorInChildren(Class<D> d)
+	{
+		D dec = null;
+		for(Object o : contents)
+			if((dec = o.getDecorator(d)) != null)
+				break;
+		
+		return dec;
+	}
 	public void removeDecorator(Class<? extends Decorator> d)
 	{
 		decorators.remove(d);
@@ -202,6 +206,9 @@ public class Object
 			Integer rm = containedIn.contentIndexByName.remove(name.toLowerCase());
 			containedIn.contents.remove(rm.intValue());
 			
+			// options: reset content index mapping shit every time something is removed or
+			//              simply make contents a hashmap and iterate entryset hmmmmm :thinking:
+			
 			wasIn = containedIn;
 		}
 		
@@ -235,6 +242,11 @@ public class Object
 			return "";
 	}
 	public void printSelf(String str)
+	{
+		if(str.length() > 0)
+			Server.printToClient(str.strip() + "\n\n");
+	}
+	public void printOther(String str, Object other)
 	{
 		if(str.length() > 0)
 			Server.printToClient(str.strip() + "\n\n");

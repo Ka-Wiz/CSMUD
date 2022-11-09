@@ -24,17 +24,17 @@ public class ClientProcess implements Runnable
 		}
 		catch(IOException e1)
 		{
-			disconnect();
+			disconnect(true);
 			return;
 		}
 		
 		s = cs;
 	}
 	
-	void disconnect()
+	void disconnect(boolean fail)
 	{
 		connected = false;
-		Server.logout(this);
+		Server.logout(this, fail);
 	}
 
 	@Override
@@ -79,7 +79,7 @@ public class ClientProcess implements Runnable
 		}
 		catch (IOException e1)
 		{
-			disconnect();
+			disconnect(true);
 		}
 		
 		String command;
@@ -93,7 +93,7 @@ public class ClientProcess implements Runnable
 				
 				if(command.equals("quit") || command.equals("exit") || command.equals("logout"))
 				{
-					disconnect();
+					disconnect(false);
 					break;
 				}
 				else
@@ -102,7 +102,7 @@ public class ClientProcess implements Runnable
 			}
 			catch (IOException e)
 			{
-				disconnect();
+				disconnect(true);
 				break;
 			}
 			

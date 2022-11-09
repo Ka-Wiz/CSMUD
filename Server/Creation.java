@@ -20,22 +20,24 @@ public class Creation
 		
 		createClock(s);
 		
+		createSword(s);
+		
 		Object bri = createHuman(s);
 		bri.setName("Brian");
 		bri.setDescription("A pleasant-looking fellow with light brown hair and blue eyes.");
 		
-		Dialog d = bri.addDecorator(Dialog.class);
-		d.createNode("hello", "Hi there! I'm Brian, and this is my virtual world [CSMUD]. I hope you're enjoying it so far!");
-		d.createNode("csmud", "Yes, it's short for Computer Science Multi User Dungeon. It's not a very creative name but it's made specifically to give java [students] "
+		final Dialog d1 = bri.addDecorator(Dialog.class);
+		d1.createNode("hello", "Hi there! I'm Brian, and this is my virtual world [CSMUD]. I hope you're enjoying it so far!");
+		d1.createNode("csmud", "Yes, it's short for Computer Science Multi User Dungeon. It's not a very creative name but it's made specifically to give java [students] "
 				+ "an easy framework for applying what they're learning to a fun, interactive virtual environment they can share with their friends.");
-		d.createNode("students", "I'm a student myself (we all are, I would hope!) and I felt like the CS curriculum was sorely lacking in ways to spark engagement and "
+		d1.createNode("students", "I'm a student myself (we all are, I would hope!) and I felt like the CS curriculum was sorely lacking in ways to spark engagement and "
 				+ "creativity. So I did something about it! It's technically a [reimplementation] of my main project.");
-		d.createNode("reimplementation", "Hehe, well, for several years I've been working on a full 3D virtual world called Antaeon. It's meant to be a fun sci-fi romp on "
+		d1.createNode("reimplementation", "Hehe, well, for several years I've been working on a full 3D virtual world called Antaeon. It's meant to be a fun sci-fi romp on "
 				+ "a little simulated planet, inspired by mid-00s Star Wars RPGs like Galaxies and Knights of the Old Republic. CSMUD is a side project that borrows many of the "
 				+ "[design] concepts I came up with for it, like the dialog system you are interacting with right now!");
-		d.createNode("design", "Well, trying to make games is how I got into computer science. I learned that it's hard, I suck at making assets, and that I love programming. "
+		d1.createNode("design", "Well, trying to make games is how I got into computer science. I learned that it's hard, I suck at making assets, and that I love programming. "
 				+ "Uh, hence the whole [CS] student thing. Anyway, I'm tired of writing this dialog. Go out and have fun in the world!");
-		d.createNode("cs", "UGH, I thought I told you I was tired of writing this. Just check out the code in the github, it's cool. Creation.java is the best place "
+		d1.createNode("cs", "UGH, I thought I told you I was tired of writing this. Just check out the code in the github, it's cool. Creation.java is the best place "
 				+ "to start, as it is where this dialog and the rest of the world is defined and the main interface to the engine. I guess one of the central things "
 				+ "to know about the world it that it's just a big tree, where child-parent relationships represent 'containment'. The game makes very little distinction "
 				+ "between players in a room and the items in their inventories; you could say the players are items in the room's inventory. It's simple but effective, "
@@ -62,15 +64,33 @@ public class Creation
 		bri.setName("Brian");
 		bri.setDescription("A pleasant-looking fellow with light brown hair and blue eyes.");
 		
-		d = bri.addDecorator(Dialog.class);
-		d.createNode("hello", "Hi there! I'm Brian, and this is my virtu... (He seems to notice his surroundings.) Oh wait, I'm the woods Brian. Welcome to the "
-				+ "[combat] demonstration!");
-		d.createNode("combat", "Yes indeed! Down those spooky steps is a [goblin] cave. They're nasty little guys, but you can [fight] to defend yourself!");
-		d.createNode("goblin", "Goblins are short green dudes that like to raid human settlements. They're also great generic video game baddies. Though... I "
-				+ "did see them acting [weird] once.");
-		d.createNode("fight", "They'll attack you on sight, but you can defend yourself with your fists (ineffective) or, ideally, a [weapon].");
-		d.createNode("weapon", "placeholder for demonstrating dialog running code to examine players weapon");
-		d.createNode("weird", "They were getting along with this other tribe I'd seen them fighting before. I don't know much about the specifics but "
+		Dialog dialog = bri.addDecorator(Dialog.class);
+		dialog.createNode("hello", "Hi there! I'm Brian, and this is my virtu... (He seems to notice his "
+									+ "surroundings.) Oh wait, I'm the woods Brian. Welcome to the [combat] demonstration!");
+		
+		dialog.createNode("combat", "Yes indeed! Down those spooky steps is a [goblin] cave. They're nasty "
+									+ "little guys, but you can [fight] to defend yourself!");
+		
+		dialog.createNode("goblin", "Goblins are short green dudes that like to raid human settlements. They're "
+									+ "also great generic video game baddies. Though... I did see them acting [weird] once.");
+		
+		dialog.createNode("fight", "They'll attack you on sight, but you can defend yourself with your fists or, ideally, a [weapon].");
+		
+		dialog.createNode("weapon", "Yup, it's generally a good idea to equip yourself with something. Here, "
+									+ "would you like a [dagger] or a [sword]? Daggers are faster, but swords are stronger!");
+		
+		dialog.createNode("dagger", "Here you go, hope you enjoy slicing and dicing!", 
+										dialog.new DialogCode() { public void enter() {
+																						Server.printToClient("He lightly tosses you a dagger.");
+																						createDagger(dialog.talkingTo);
+																				  	  } } );
+		
+		dialog.createNode("sword", "Here you go, hope you enjoy hacking and slashing!",
+										dialog.new DialogCode() { public void enter() {
+																						Server.printToClient("He gently hands you a sword.");
+																						createSword(dialog.talkingTo);
+																					  } } );
+		dialog.createNode("weird", "They were getting along with this other tribe I'd seen them fighting before. I don't know much about the specifics but "
 				+ "I heard the words 'krplach' and 'smootu'. Do with that what you will.");
 		
 		connectRooms(copse, woods, "copse", "exit", "into", "out");
@@ -152,6 +172,7 @@ public class Creation
 	{
 		Object arms = new Object(storeIn, "arms");
 		arms.setLocked("They are attached.");
+		arms.addDecorator(Holder.class);
 		Movement mv = arms.addDecorator(Movement.class);
 		mv.setMovePriority(Movement.MovePriority.TERTIARY);
 		mv.moveString = "drag yourself";
@@ -175,6 +196,24 @@ public class Creation
 		clock.addDecorator(TimeDisplay.class);
 		
 		return clock;
+	}
+	
+	public static Object createDagger(Object storeIn)
+	{
+		Object dag = new Object(storeIn, "dagger", "A rather short but deadly sharp piece of metal.");
+		Damage d = dag.addDecorator(Damage.class);
+		d.damage = 2;
+		d.cooldown = 2.5f;
+		return dag;
+	}
+	
+	public static Object createSword(Object storeIn)
+	{
+		Object sword = new Object(storeIn, "sword", "A moderately long, sharp piece of metal.");
+		Damage d = sword.addDecorator(Damage.class);
+		d.damage = 5;
+		d.cooldown = 5.f;
+		return sword;
 	}
 	
  	public static void connectRooms(Object r1, Object r2, String name1, String type1)

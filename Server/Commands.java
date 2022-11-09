@@ -1,10 +1,13 @@
 package Server;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Stack;
 
-import Server.Decorators.*;
+import Server.Decorators.Holder;
+import Server.Decorators.PlayerControlled;
 
 
 public class Commands
@@ -12,9 +15,19 @@ public class Commands
 	static Map<String, Command> commandStrings = new LinkedHashMap<String, Command>();
 	static Map<String, String> commandDescriptions = new LinkedHashMap<String, String>();
 	
-	public static Object sender;
+	public static Object sender, target;
 	public static String command;
 	public static String[] args;
+	
+	private static class CommandState
+	{
+		Object sender, target;
+		String command;
+		String[] args;
+	}
+	
+	private static Stack<CommandState> states = new Stack<>();
+	private static CommandState current;
 	
 	static void Initialize()
 	{
@@ -24,8 +37,6 @@ public class Commands
 			{
 				if(Server.checkDebug(Server.DBG_CMD))
 					printDebug("inside look");
-
-				Object target = getTarget();
 				
 				if(Server.checkDebug(Server.DBG_CMD))
 					printDebug("got target " + target);
@@ -62,8 +73,6 @@ public class Commands
 				if(Server.checkDebug(Server.DBG_CMD))
 					printDebug("inside think");
 				
-				Object target = getTarget();
-				
 				if(target == null)
 					printSelf(sender.containedIn.getInteractables());
 				else
@@ -88,10 +97,20 @@ public class Commands
 		{
 			public void invoke()
 			{
+				ArrayList<Object> holders = new ArrayList<>();
 				String contents = "You have:\n";
 				for(Object o : sender.contents)
 					if(!o.locked)
 						contents += o.getName() + "\n";
+					else if(o.getDecorator(Holder.class) != null)
+						holders.add(o);
+				
+				for(Object o : holders)
+				{
+					contents += "\nHeld in your " + o.getName() + ":\n";
+					for(Object h : o.contents)
+						contents += h.getName() + "\n";
+				}
 				
 				printSelf(contents);
 			}
@@ -101,16 +120,57 @@ public class Commands
 		{
 			public void invoke()
 			{
-				Object target = getTarget();
-				
-				if(target.locked)
+				if(target != null && target.locked)
 				{
 					printSelf(target.lockMessage);
 					return;
 				}
-				
-				if(target.containedIn == sender.containedIn)
+				else if(target.containedIn == sender.containedIn)
+				{
+					printSelf("You pick up the " + target.getName() + ".");
 					target.storeIn(sender);
+				}
+					
+			}
+		});
+		
+		createCommand("hold", "hold an object, if you are capable. for weapons, this means equipping", new Command()
+		{
+			public void invoke()
+			{
+				if(target == null)
+				{
+					printSelf("Could not find object to hold!");
+					return;
+				}
+				else
+				{
+					if(target.containedIn != sender)
+					{
+						Commands.parseCommand(sender, "take " + target.getName());
+						if(target.containedIn != sender)
+							return;
+					}
+				}
+				
+				Holder h = sender.findDecoratorInChildren(Holder.class);
+				
+				if(h == null)
+					printSelf("You do not have anything to hold that with!");
+				else
+				{
+					String heldString = "You ";
+					if(h.obj.contents.size() > 0)
+					{
+						Object held = h.obj.contents.get(0);
+						heldString += "put away the " + held.getName() + " and ";
+						held.storeIn(sender);
+					}
+						
+					heldString += "hold the " + target.getName() + " with your " + h.obj.getName() + ".";
+					printSelf(heldString);
+					target.storeIn(h.obj);
+				}
 			}
 		});
 		
@@ -118,8 +178,7 @@ public class Commands
 		{
 			public void invoke()
 			{
-				Object target = getTarget();
-				if(target.containedIn == sender)
+				if(target != null && target.containedIn == sender)
 					if(!target.locked)
 						target.storeIn(sender.containedIn);
 					else
@@ -169,9 +228,26 @@ public class Commands
 		commandDescriptions.put(text, desc);
 	}
 	
-	public static void parseCommand(Object sender, String input)
+	public static void parseCommand(Object send, String input) 
 	{
+		// "parse" all statics for use in commands: sender, target, command, args
+		// commands can nest other commands so we need an "activation record" stack
+		
+		if(current != null) // we are nested
+			states.push(current);
+		
+		current = new CommandState();
+		
+		sender  = null; // these mostly ensure that if something is screwed up with commands it'll fail somewhere
+		target  = null;
+		command = null;
+		args    = null;
+		
+		sender = send;
+		
 		boolean debug = Server.checkDebug(Server.DBG_CMD);
+		if(debug)
+			System.out.println("parsing command " + input + " from " + sender.getName());
 		
 		if(input.length() == 0)
 		{
@@ -179,47 +255,79 @@ public class Commands
 			return;
 		}
 		
-		if(debug)
-			System.out.println("parsing command " + input);
-		
 		String[] words = input.split(" ", 2);
 		
 		if(words[0].equals("r"))
 			input = input.replaceFirst("r", sender.getDecorator(PlayerControlled.class).lastCommand);
 		
 		words = input.split(" ");
-		Commands.command = words[0];
 		
-		Commands.sender = sender;
-		Commands.args = Arrays.copyOfRange(words, 1, words.length);
+		int wordsInTarget = 0;
+		if(words.length > 1)
+		{
+			String targName = words[1];
+			if(targName.equals("self"))
+			{
+				target = sender;
+				wordsInTarget = 1;
+			}
+			else
+				for(int i = 2; i < 4; ++i)
+				{
+					target = getTargetFromContext(sender, targName);
+					
+					if(target == null && i < words.length)
+						targName += " " + words[i];
+					else
+					{
+						if(i < words.length)
+							wordsInTarget = i - 1;
+						
+						break;
+					}
+				}
+		}
 		
-		Object targ = getTarget();
+		if(debug)
+			System.out.println("target name is " + wordsInTarget + " words");
+		
+		command = words[0];
+		args = Arrays.copyOfRange(words, 1 + wordsInTarget, words.length);
+		
+		current.sender  = sender; // we can save these things to CommandState now because they are determined
+		current.target  = target;
+		current.command = command;
+		current.args    = args;
 		
 		if(!words[0].equals("r")) // we have to split up the r stuff because r depends on valid target
 		{
-			String last = targ != null ? String.join(" ", command, words[1]) : command;
+			String last = target == null ? command : command + " " + target.getName();
 			sender.getDecorator(PlayerControlled.class).lastCommand = last; // eclipse breaks if we don't use last lmao
+			
+			if(debug)
+				System.out.println("last command saved as " + last);
 		}
 		
 		Command cmd;
 		boolean found = false;
 		
-		if(targ != null) // prioritize specific commands/general command overrides
+		if(target != null) // prioritize specific commands/general command overrides
 		{
-			if((cmd = targ.commandStrings.get(command)) != null)
+			cmd = target.getCommand(command);
+			if((cmd = target.commandStrings.get(command)) != null)
 			{
 				if(debug)
-					System.out.println(targ.getName() + " recognized " + command + " invoking with " + (args.length-1) + " args" );
+					System.out.println(target.getName() + " recognized " + command + " invoking with " + args.length + " args" );
 				
 				found = true;
 			}
 			else
 			{
-				for(var entry : targ.getDecorators().entrySet())
+				for(var entry : target.getDecorators().entrySet())
 					if((cmd = entry.getValue().commandStrings.get(command)) != null)
 					{
 						if(debug)
-							System.out.println(targ.getName() + " decorator " + entry.getKey() + " recognized " + command + " invoking with " + (args.length-1) + " args" );
+							System.out.println(target.getName() + " decorator " + entry.getKey() + " recognized " + command + " invoking with " + args.length + " args" );
 						
 						found = true;
 						break;
@@ -228,7 +336,6 @@ public class Commands
 			
 			if(found)
 			{
-				Commands.args = Arrays.copyOfRange(words, 2, words.length);
 				cmd.invoke();
 				
 				if(debug)
@@ -252,17 +359,27 @@ public class Commands
 			}
 			else
 			{
-				if(targ == null)
+				if(target == null)
 					printSelf("You don't know how to " + command + ".");
 				else
-					printSelf("You can't think of a way to " + command + " a " + targ.getName() + ".");
+					printSelf("You can't think of a way to " + command + " a " + target.getName() + ".");
 			}
 		}
 		
-		Commands.sender = null;
-		Commands.command = null;
-		Commands.args = null;
-		
+		// cleanup for next command environment
+		if(!states.empty())
+		{
+			current = states.pop();
+			
+			sender  = current.sender;
+			target  = current.target;
+			command = current.command;
+			args    = current.args;
+			
+			if(states.empty())
+				current = null;
+		}
+
 //		Command cmd = commandStrings.get(words[0]);
 //		if(cmd != null)
 //		{
@@ -331,30 +448,6 @@ public class Commands
 //		}
 	}
 	
-	private static Object getTarget()
-	{
-		if(args.length > 0)
-		{
-			if(args[0].equals("self"))
-				return sender;
-			else
-			{
-				Object res = null;
-				String name = args[0];
-				for(int i = 1; i < 4; ++i)
-				{
-					res = getTargetFromContext(sender, name);
-					
-					if(res == null && i < args.length)
-						name += " " + args[i];
-					else
-						return res;
-				}
-			}
-		}
-
-		return null;
-	}
 	private static Object getTargetFromContext(Object o, String s)
 	{
 		// helper function in case context scope changes later, ie "zones" where objects not in same room are visible to each other
