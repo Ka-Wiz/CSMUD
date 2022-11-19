@@ -2,7 +2,6 @@ package Server;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 public class Object
 {	
@@ -21,15 +20,12 @@ public class Object
 	public String getName() { return name; }
 	public String getDescription() { return description; }
 	
-	public void setName(String s)
+	public void setName(String newName)
 	{
 		if(containedIn != null)
-		{
-			Integer idx = containedIn.contentIndexByName.remove(name.toLowerCase());
-			containedIn.contentIndexByName.put(s.toLowerCase(), idx);
-		}
-		
-		name = s;
+			containedIn.changeContentName(this, newName);
+		else
+			name = newName;
 	}
 	public void setDescription(String s) { description = s; }
 	public void setLocked(String s) { lockMessage = s; locked = true; }
@@ -157,14 +153,13 @@ public class Object
 	
 	// CONTAINMENT ===========================
 	public ArrayList<Object> contents = new ArrayList<Object>();
-	public ArrayList<Object> parts = new ArrayList<Object>();
-	private Map<String, Integer> contentIndexByName = new HashMap<String, Integer>();
+	private HashMap<String, ArrayList<Object>> contentsByName = new HashMap<>();
 	
 	public Object containedIn;
 	Object wasIn;
 	public String containmentPreposition = "in";	// you are "in", "on", "under", etc
 	
-	public Object getContainedObjectFromString(String str)
+	public Object getContained(String str, boolean recurse, int idx)
 	{
 		if(Server.checkDebug(Server.DBG_INV))
 		{
@@ -174,34 +169,72 @@ public class Object
 			
 			s += "\nkeys:\n";
 			for(int i = 0; i < contents.size(); ++i)
-				s += contentIndexByName.keySet().toArray()[i] + "\n";
+				s += contentsByName.keySet().toArray()[i] + "\n";
 			
 			printSelf(s);
 		}
 		
-		Integer idx = contentIndexByName.get(str.toLowerCase());
+		str = str.toLowerCase();
 		
-		if(idx != null)
-			return contents.get(idx);
+		ArrayList<Object> named = contentsByName.get(str);
+		
+		if(named != null)
+			return named.get(idx);
+		else if(recurse)
+		{
+			Object found = null;
+			for(Object o : contents)
+				if((found = o.getContained(str, recurse, idx)) != null)
+					break;
+			
+			return found;
+		}
 		else
 			return null;
+	}
+	public Object getContained(String str)
+	{
+		return getContained(str, false, 0);
+	}
+	public Object getContained(String str, boolean recurse)
+	{
+		return getContained(str, recurse, 0);
 	}
 	public void storeIn(Object targ)
 	{
 		if(containedIn != null)
 		{
-			Integer rm = containedIn.contentIndexByName.remove(name.toLowerCase());
-			containedIn.contents.remove(rm.intValue());
-			
-			// options: reset content index mapping shit every time something is removed or
-			//              simply make contents a hashmap and iterate entryset hmmmmm :thinking:
+			containedIn.contents.remove(this);
+			containedIn.removeContentName(this);
 			
 			wasIn = containedIn;
 		}
 		
 		targ.contents.add(this);
-		targ.contentIndexByName.put(name.toLowerCase(), targ.contents.size()-1);
+		targ.addContentName(this);
 		containedIn = targ;
+	}
+	private void addContentName(Object obj)
+	{
+		String lowName = obj.getName().toLowerCase();
+		ArrayList<Object> named = contentsByName.get(lowName);
+		if(named == null)
+			contentsByName.put(lowName, named = new ArrayList<Object>());
+		named.add(obj);
+	}
+	private void removeContentName(Object obj)
+	{
+		String lowName = obj.getName().toLowerCase();
+		ArrayList<Object> named = contentsByName.get(lowName);
+		named.remove(obj);
+		if(named.size() == 0)
+			contentsByName.remove(lowName);
+	}
+	private void changeContentName(Object obj, String newName)
+	{
+		removeContentName(obj);
+		obj.name = newName;
+		addContentName(obj);
 	}
 	String getInteractables()
 	{

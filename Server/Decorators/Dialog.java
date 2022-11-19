@@ -121,7 +121,7 @@ public class Dialog extends Decorator
 					else
 						System.out.println("next dialog was null");
 				}
-				else if(talkingTo == null || obj.containedIn.getContainedObjectFromString(talkingTo.getName()) == null)
+				else if(talkingTo == null || obj.containedIn.getContained(talkingTo.getName()) == null)
 				{
 					talkingTo = Commands.sender;
 					curNode = root;

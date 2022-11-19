@@ -106,11 +106,12 @@ public class Commands
 						holders.add(o);
 				
 				for(Object o : holders)
-				{
-					contents += "\nHeld in your " + o.getName() + ":\n";
-					for(Object h : o.contents)
-						contents += h.getName() + "\n";
-				}
+					if(o.contents.size() > 0)
+					{
+						contents += "\nHeld in your " + o.getName() + ":\n";
+						for(Object h : o.contents)
+							contents += h.getName() + "\n";
+					}
 				
 				printSelf(contents);
 			}
@@ -451,12 +452,9 @@ public class Commands
 	private static Object getTargetFromContext(Object o, String s)
 	{
 		// helper function in case context scope changes later, ie "zones" where objects not in same room are visible to each other
-		System.out.println("checking for object " + s);
-		Object found = o.containedIn.getContainedObjectFromString(s);
+		Object found = o.containedIn.getContained(s);
 		if(found == null)
-		{
-			found = sender.getContainedObjectFromString(s);
-		}
+			found = sender.getContained(s, true);
 		return found;
 	}
 

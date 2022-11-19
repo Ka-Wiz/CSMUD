@@ -7,6 +7,7 @@ public class Creation
 	public static void createWorld()
 	{
 		Object hub = Server.world;
+		hub.setName("World");
 		
 		Object s = Server.startingRoom = new Object(hub, "the white room", "a sterile white room of moderate size, bare of almost any detail. The walls and "
 				+ "floor are a familiar yet unidentifiable matte white material that nevertheless glows with a pleasant softness from an unseen "
