@@ -48,7 +48,8 @@ public class Creation
 				+ "You feel like you could stand here forever, breathing the fresh air and feeling your mind fill with peace and positivity. Maybe you will. Or maybe you'll "
 				+ "go back through the doorway standing straight up out of the grass, or down the clean-looking dirt path to the east. Your call. No rush~");
 		
-		connectRooms(s, meadow, "doorway", "doorway", "out", "in");
+		RoomConnection doorway = connectRooms(s, meadow, "doorway", "doorway", "out", "in");
+		doorway.makeCloseable("door", false);
 		
 		Object copse = new Object(hub, "copse", "the edge of a copse, which the search results for 'small group of trees term' tell me is a... well, small group of trees. "
 				+ "I think the difference between a copse and a grove is that a copse can have undergrowth? Not really sure. Anyway, you're on the edge of one. There's really "
@@ -175,15 +176,15 @@ public class Creation
 		return sword;
 	}
 	
- 	public static void connectRooms(Object r1, Object r2, String name1, String type1)
+ 	public static RoomConnection connectRooms(Object r1, Object r2, String name1, String type1)
 	{
-		connectRooms(r1, r2, name1, name1, type1, type1);
+		return connectRooms(r1, r2, name1, name1, type1, type1);
 	}
-	public static void connectRooms(Object r1, Object r2, String name1, String name2, String type1)
+	public static RoomConnection connectRooms(Object r1, Object r2, String name1, String name2, String type1)
 	{
-		connectRooms(r1, r2, name1, name2, type1, type1);
+		return connectRooms(r1, r2, name1, name2, type1, type1);
 	}
-	public static void connectRooms(Object r1, Object r2, String name1, String name2, String type1, String type2)
+	public static RoomConnection connectRooms(Object r1, Object r2, String name1, String name2, String type1, String type2)
 	{
 		Object c1 = new Object(r1, name1);
 		RoomConnection rc1 = c1.addDecorator(RoomConnection.class);
@@ -195,5 +196,7 @@ public class Creation
 		
 		rc1.connectionTo = c2;
 		rc2.connectionTo = c1;
+		
+		return rc1;
 	}
 }

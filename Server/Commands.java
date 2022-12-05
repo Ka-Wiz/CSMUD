@@ -89,7 +89,7 @@ public class Commands
 					str += s + " ";
 				str = str.strip();
 				
-				printSelf("You " + str + ".");
+				sender.printRoomAll(str);
 			}
 		});
 		

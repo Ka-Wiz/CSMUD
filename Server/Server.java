@@ -2,7 +2,6 @@ package Server;
 
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -16,6 +15,9 @@ import Server.Decorators.PlayerControlled;
 
 public class Server
 {
+	private static boolean running = false;
+	public static boolean isRunning() { return running; }
+	
 	public static void main(String[] args) throws IOException
 	{
 		Commands.Initialize();
@@ -23,21 +25,23 @@ public class Server
 		startWorldTime();
 		Creation.createWorld();
 		
-		@SuppressWarnings("resource")
+		running = true;
+		
 		ServerSocket ss = new ServerSocket(1234);
-		Socket cs;
 		
 		createAccount(null, "", "");
 		
-		while (true)
-		{
-			cs = ss.accept();
-
-			System.out.println("Connection from: " + cs);
-
-			ClientProcess cp = new ClientProcess(cs);
-			new Thread(cp).start();
-		}
+		while (running)
+			try
+			{
+				new Thread(new ClientProcess(ss.accept())).start();
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
+		
+		ss.close();
 	}
 	
 	// WORLD ============================

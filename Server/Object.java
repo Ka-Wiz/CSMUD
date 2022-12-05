@@ -18,6 +18,7 @@ public class Object
 	private String description = "A miscellaneous object. The world is composed of such things.";
 	
 	public String getName() { return name; }
+	public String toString() { return getName(); }
 	public String getDescription() { return description; }
 	
 	public void setName(String newName)
@@ -40,117 +41,6 @@ public class Object
 		return FormatBlock(desc);
 	}
 	
-	// COMMANDS ==============================
-	HashMap<String, ArrayList<Object>> preListeners;
-	HashMap<String, ArrayList<Object>> postListeners;
-	
-	HashMap<String, Command> commandStrings = new HashMap<String, Command>();
-	
-	Command getCommand(String commandName)
-	{
-		Command c = commandStrings.get(commandName);
-		if(c != null)
-			return c;
-		else
-			for(var entry : decorators.entrySet())
-				if((c = entry.getValue().commandStrings.get(commandName)) != null)
-					return c;
-		
-		return null;
-	}
-	String getCommands()
-	{
-		String cmd = "";
-		
-		for(String s : commandStrings.keySet())
-			cmd += s + ", ";
-		
-		for(var entry : decorators.entrySet())
-			cmd += entry.getValue().GetCommands();
-		
-		if(cmd.length() > 0)
-		{
-			cmd = ("\nYou know you can:\n" + cmd);
-			cmd = (cmd.substring(0, cmd.length() - 2) + "\n");
-		}
-		else
-			cmd = "You know there is nothing special you can do with this object.";
-		
-		return cmd;
-	}
-
-	boolean locked;
-	String lockMessage = "You cannot take that object.";
-	
-	// DECORATORS ============================
-	private HashMap<Class<? extends Decorator>, Decorator> decorators = new HashMap<Class<? extends Decorator>, Decorator>();
-	
-	public HashMap<Class<? extends Decorator>, Decorator> getDecorators() { return decorators; }
-	public <D extends Decorator> D addDecorator(Class<D> d)
-	{
-		Decorator tmp = decorators.get(d);
-		
-		if(tmp == null)
-			try
-			{
-				tmp = d.getDeclaredConstructor().newInstance();
-				tmp.obj = this;
-				decorators.put(d, tmp);
-				return d.cast(tmp);
-			}
-			catch(Exception e) { e.printStackTrace(); return null;}
-		else
-			return null;
-	}
-	public <D extends Decorator> D addDecorator(D d)
-	{
-		Decorator tmp = decorators.get(d.getClass());
-		
-		if(tmp == null)
-			try
-			{
-				d.obj = this;
-				decorators.put(d.getClass(), d);
-				return (D)d;
-			}
-			catch(Exception e) { e.printStackTrace(); return null;}		
-		else
-			return null;
-	}
-	public <D extends Decorator> D getDecorator(Class<D> d)
-	{
-		Decorator tmp = decorators.get(d);
-		if(tmp == null)
-			return null;
-		
-		return d.cast(tmp);
-	}
-	public <D extends Decorator> D findDecoratorInChildren(Class<D> d)
-	{
-		D dec = null;
-		for(Object o : contents)
-			if((dec = o.getDecorator(d)) != null)
-				break;
-		
-		return dec;
-	}
-	public void removeDecorator(Class<? extends Decorator> d)
-	{
-		decorators.remove(d);
-	}
-	public boolean hasDecorator(Class<? extends Decorator> d)
-	{
-		Decorator dec = decorators.get(d);
-		
-		return dec != null;
-	}
-	
-	// INTEGRITY =============================
-	private int integrity = 100;
-	
-	public int getIntegrity() { return integrity; }
-	public void changeIntegrityBy(int chg) { integrity += chg; }
-	
 	// CONTAINMENT ===========================
 	public ArrayList<Object> contents = new ArrayList<Object>();
 	private HashMap<String, ArrayList<Object>> contentsByName = new HashMap<>();
@@ -158,6 +48,9 @@ public class Object
 	public Object containedIn;
 	Object wasIn;
 	public String containmentPreposition = "in";	// you are "in", "on", "under", etc
+	
+	boolean locked;
+	String lockMessage = "You cannot take that object.";
 	
 	public Object getContained(String str, boolean recurse, int idx)
 	{
@@ -251,6 +144,118 @@ public class Object
 		
 		return ntr;
 	}
+	public Object getRoom()
+	{
+		return containedIn;
+	}
+	
+	// COMMANDS ==============================
+	HashMap<String, ArrayList<Object>> preListeners;
+	HashMap<String, ArrayList<Object>> postListeners;
+	
+	HashMap<String, Command> commandStrings = new HashMap<String, Command>();
+	
+	Command getCommand(String commandName)
+	{
+		Command c = commandStrings.get(commandName);
+		if(c != null)
+			return c;
+		else
+			for(var entry : decorators.entrySet())
+				if((c = entry.getValue().commandStrings.get(commandName)) != null)
+					return c;
+		
+		return null;
+	}
+	String getCommands()
+	{
+		String cmd = "";
+		
+		for(String s : commandStrings.keySet())
+			cmd += s + ", ";
+		
+		for(var entry : decorators.entrySet())
+			cmd += entry.getValue().GetCommands();
+		
+		if(cmd.length() > 0)
+		{
+			cmd = ("\nYou know you can:\n" + cmd);
+			cmd = (cmd.substring(0, cmd.length() - 2) + "\n");
+		}
+		else
+			cmd = "You know there is nothing special you can do with this object.";
+		
+		return cmd;
+	}	
+	
+	// DECORATORS ============================
+	private HashMap<Class<? extends Decorator>, Decorator> decorators = new HashMap<Class<? extends Decorator>, Decorator>();
+	
+	public HashMap<Class<? extends Decorator>, Decorator> getDecorators() { return decorators; }
+	public <D extends Decorator> D addDecorator(Class<D> d)
+	{
+		Decorator tmp = decorators.get(d);
+		
+		if(tmp == null)
+			try
+			{
+				tmp = d.getDeclaredConstructor().newInstance();
+				tmp.obj = this;
+				decorators.put(d, tmp);
+				return d.cast(tmp);
+			}
+			catch(Exception e) { e.printStackTrace(); return null;}
+		else
+			return null;
+	}
+	public <D extends Decorator> D addDecorator(D d)
+	{
+		Decorator tmp = decorators.get(d.getClass());
+		
+		if(tmp == null)
+			try
+			{
+				d.obj = this;
+				decorators.put(d.getClass(), d);
+				return (D)d;
+			}
+			catch(Exception e) { e.printStackTrace(); return null;}		
+		else
+			return null;
+	}
+	public <D extends Decorator> D getDecorator(Class<D> d)
+	{
+		Decorator tmp = decorators.get(d);
+		if(tmp == null)
+			return null;
+		
+		return d.cast(tmp);
+	}
+	public <D extends Decorator> D findDecoratorInChildren(Class<D> d)
+	{
+		D dec = null;
+		for(Object o : contents)
+			if((dec = o.getDecorator(d)) != null)
+				break;
+		
+		return dec;
+	}
+	public void removeDecorator(Class<? extends Decorator> d)
+	{
+		decorators.remove(d);
+	}
+	public boolean hasDecorator(Class<? extends Decorator> d)
+	{
+		Decorator dec = decorators.get(d);
+		
+		return dec != null;
+	}
+	
+	// INTEGRITY =============================
+	private int integrity = 100;
+	
+	public int getIntegrity() { return integrity; }
+	public void changeIntegrityBy(int chg) { integrity += chg; }
 	
 	// =================================================
 	

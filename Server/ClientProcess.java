@@ -105,7 +105,6 @@ public class ClientProcess implements Runnable
 				disconnect(true);
 				break;
 			}
-			
 		}
 		
 		try
@@ -113,8 +112,8 @@ public class ClientProcess implements Runnable
 			dis.close();
 			dos.close();
 			s.close();
-			
-		}catch(IOException e){
+		}
+		catch(IOException e){
 			e.printStackTrace();
 		}
 	}
