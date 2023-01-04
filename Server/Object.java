@@ -186,7 +186,9 @@ public class Object
 			cmd = "You know there is nothing special you can do with this object.";
 		
 		return cmd;
-	}	
+	}
+	
+	Combat combat;
 	
 	// DECORATORS ============================
 	private HashMap<Class<? extends Decorator>, Decorator> decorators = new HashMap<Class<? extends Decorator>, Decorator>();
@@ -269,17 +271,17 @@ public class Object
 	public void printSelf(String str)
 	{
 		if(str.length() > 0)
-			Server.printToClient(str.strip() + "\n\n");
+			Server.printToCurrentClient(str.strip() + "\n\n");
 	}
 	public void printOther(String str, Object other)
 	{
 		if(str.length() > 0)
-			Server.printToClient(str.strip() + "\n\n");
+			Server.printToCurrentClient(str.strip() + "\n\n");
 	}
 	public void printRoom(String str)
 	{
 		if(str.length() > 0)
-			Server.printToRoom(str.strip() + "\n\n", containedIn);
+			Server.printToRoom(str.strip() + "\n\n", getRoom());
 	}
 	public void printRoom(String str, Object room)
 	{
@@ -289,6 +291,6 @@ public class Object
 	public void printRoomAll(String str)
 	{
 		if(str.length() > 0)
-			Server.printToRoomAll(str.strip() + "\n\n", containedIn);
+			Server.printToRoomAll(str.strip() + "\n\n", getRoom());
 	}
 }

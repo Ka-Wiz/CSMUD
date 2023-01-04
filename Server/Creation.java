@@ -83,13 +83,13 @@ public class Creation
 		
 		dialog.createNode("dagger", "Here you go, hope you enjoy slicing and dicing!", 
 										dialog.new DialogCode() { public void enter() {
-																						Server.printToClient("He lightly tosses you a dagger.");
+																						Server.printToCurrentClient("He lightly tosses you a dagger.");
 																						createDagger(dialog.talkingTo);
 																				  	  } } );
 		
 		dialog.createNode("sword", "Here you go, hope you enjoy hacking and slashing!",
 										dialog.new DialogCode() { public void enter() {
-																						Server.printToClient("He gently hands you a sword.");
+																						Server.printToCurrentClient("He gently hands you a sword.");
 																						createSword(dialog.talkingTo);
 																					  } } );
 		dialog.createNode("weird", "They were getting along with this other tribe I'd seen them fighting before. I don't know much about the specifics but "
@@ -123,21 +123,21 @@ public class Creation
 	public static Object createHuman(Object storeIn)
 	{
 		Object body = new Object(storeIn);
-		createArms(body);
+		createHands(body);
 		createLegs(body);
 		
 		return body;
 	}
-	public static Object createArms(Object storeIn)
+	public static Object createHands(Object storeIn)
 	{
-		Object arms = new Object(storeIn, "arms");
-		arms.setLocked("They are attached.");
-		arms.addDecorator(Holder.class);
-		Movement mv = arms.addDecorator(Movement.class);
+		Object hands = new Object(storeIn, "hands");
+		hands.setLocked("They are attached.");
+		hands.addDecorator(Holder.class);
+		Movement mv = hands.addDecorator(Movement.class);
 		mv.setMovePriority(Movement.MovePriority.TERTIARY);
 		mv.moveString = "drag yourself";
 		
-		return arms;
+		return hands;
 	}
 	public static Object createLegs(Object storeIn)
 	{

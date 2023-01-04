@@ -4,6 +4,8 @@ import Server.Decorator;
 
 public class Holder extends Decorator
 {
+	public int damage = 5;
+	
 	protected void Initialize()
 	{
 		

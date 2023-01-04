@@ -5,6 +5,7 @@ import java.net.ServerSocket;
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -61,7 +62,7 @@ public class Server
 		public void run() {};
 		public void cancel() { tt.cancel(); tt = null; }
 	}
-	public static void schedule(ScheduleTask task, float delay)
+	public static ScheduleTask schedule(ScheduleTask task, float delay)
 	{
 		TimerTask tt = new TimerTask() {
 	        public void run()
@@ -84,11 +85,12 @@ public class Server
 	    task.setTimerTask(tt);
 	    
 	    timer.schedule(tt, (long)(delay * 1000.f));
+	    return task;
 	}
-	public static void schedule(ScheduleTask task, LocalTime time)
+	public static ScheduleTask schedule(ScheduleTask task, LocalTime time)
 	{
 		float seconds = (Duration.between(worldTime, time).toMinutes() / worldTickMinutes) * worldTick - Duration.between(lastWorldTick, LocalTime.now()).toSeconds();
-		schedule(task, seconds);
+		return schedule(task, seconds);
 	}
 	private static void startWorldTime()
 	{
@@ -119,6 +121,7 @@ public class Server
 			
 			Server.curClient = cp;
 			Commands.parseCommand(cp.account.controlling, command);
+			Server.curClient = null;
 		}
 		catch(Exception e)
 		{
@@ -152,7 +155,7 @@ public class Server
 			if(cp != null)
 			{
 				Server.curClient = cp;
-				printToClient("Account creation successful, welcome to CSMUD!\nType \"help\" for... well, you get it.");
+				printToCurrentClient("Account creation successful, welcome to CSMUD!\nType \"help\" for... well, you get it.");
 				
 				attemptLogin(cp, name, pass);
 			}
@@ -214,7 +217,7 @@ public class Server
 						
 						player.getDecorator(PlayerControlled.class).client = account.client = cp;
 						
-						printToClient("A swirling flash of multicolored light heralds your arrival into the world.");
+						printToCurrentClient("A swirling flash of multicolored light heralds your arrival into the world.");
 						printToRoom(player.getName() + " appears in a swirling flash of multicolored light.", player.containedIn);
 						
 						Commands.parseCommand(player, "look");
@@ -226,13 +229,13 @@ public class Server
 					}
 					else
 					{
-						printToClient("This account is already logged in!");
+						printToCurrentClient("This account is already logged in!");
 						return null;
 					}
 				}
 				else
 				{
-					printToClient("Incorrect login.");
+					printToCurrentClient("Incorrect login.");
 					return null;
 				}
 			}
@@ -258,7 +261,7 @@ public class Server
 			if(!fail)
 			{
 				Server.curClient = cp;
-				printToClient("Your view of the world quickly dissipates to nothing as you are enveloped by a multicolored light.");
+				printToCurrentClient("Your view of the world quickly dissipates to nothing as you are enveloped by a multicolored light.");
 			}
 			
 			Object player = cp.account.controlling;
@@ -279,11 +282,23 @@ public class Server
 	}
 	
 	// PRINTING =========================
-	public static void printToClient(String msg)
+	public static void printToCurrentClient(String msg)
 	{
 		try
 		{
-			curClient.dos.writeUTF(msg.strip() + "\n\n");
+			if(curClient != null)
+				curClient.dos.writeUTF(msg.strip() + "\n\n");
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+	}
+	public static void printToClient(String msg, ClientProcess cli)
+	{
+		try
+		{
+			cli.dos.writeUTF(msg.strip() + "\n\n");
 		}
 		catch (IOException e)
 		{
@@ -310,7 +325,20 @@ public class Server
 		try
 		{
 			for(ClientProcess cp : clients)
-				if(cp.account.controlling.containedIn == room && cp != curClient)
+				if(cp.account.controlling.getRoom() == room && cp != curClient)
+					cp.dos.writeUTF(msg.strip() + "\n\n");			
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+	}
+	public static void printToRoomExcluding(String msg, Object room, Object... toIgnore )
+	{
+		try
+		{
+			for(ClientProcess cp : clients)
+				if(cp.account.controlling.getRoom() == room && !new ArrayList<Object>(Arrays.asList(toIgnore)).contains(cp.account.controlling))
 					cp.dos.writeUTF(msg.strip() + "\n\n");			
 		}
 		catch (IOException e)
@@ -323,7 +351,7 @@ public class Server
 		try
 		{
 			for(ClientProcess cp : clients)
-				if(cp.account.controlling.containedIn == room)
+				if(cp.account.controlling.getRoom() == room)
 					cp.dos.writeUTF(msg.strip() + "\n\n");			
 		}
 		catch (IOException e)

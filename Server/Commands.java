@@ -4,8 +4,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.Stack;
 
+import Server.Decorators.Damage;
 import Server.Decorators.Holder;
 import Server.Decorators.PlayerControlled;
 
@@ -19,6 +21,8 @@ public class Commands
 	public static String command;
 	public static String[] args;
 	
+	private static Random rand;
+	
 	private static class CommandState
 	{
 		Object sender, target;
@@ -31,6 +35,8 @@ public class Commands
 	
 	static void Initialize()
 	{
+		rand = new Random();
+		
 		createCommand("look", "look at your surroundings, or examine a specific target", new Command()
 		{
 			public void invoke()
@@ -187,7 +193,93 @@ public class Commands
 			}
 		});
 		
-		createCommand("s", "say something out loud, used to communicate with players and NPCs alike. be careful, you never know what might hear..", new Command()
+		createCommand("attack", "attack a target with your currently held object", new Command()
+		{
+			public void invoke()
+			{
+				if(target != null)
+				{
+					PlayerControlled playerTarget = target.getDecorator(PlayerControlled.class);
+					
+					Combat combat = sender.combat;
+					
+					if(combat != null)
+					{
+						if(combat != target.combat)
+						{
+							if(target.combat == null)
+							{
+								target.combat = combat;
+								combat.addParticipant(sender, command);
+							}
+							else
+							{
+								combat.removeParticipant(sender);
+								target.combat.addParticipant(sender, command);
+							}
+							
+						}
+						else if(combat.update.isScheduled())
+						{
+							printSelf("You are looking for your chance...");
+							return;
+						}
+					}
+					else
+					{
+						if(target.combat == null)
+						{
+							sender.combat = new Combat(command, sender, target);
+							target.combat = sender.combat;
+							
+							printSelf("You have the initiative and strike first!");
+						}
+						else
+						{
+							target.combat.addParticipant(sender, command);
+							sender.combat = target.combat;
+						}
+					}
+					
+					Holder holder = sender.findDecoratorInChildren(Holder.class);
+					Damage weapon = holder.obj.findDecoratorInChildren(Damage.class);
+					String weaponName = weapon == null ? "bare " + holder.obj.getName() : weapon.obj.getName();
+					float maxDamage = weapon == null ? holder.damage : weapon.damage;
+					float damage = rand.nextInt() % (weapon == null ? holder.damage : weapon.damage);
+					float ratio = damage / maxDamage;
+					
+					String attackStr = "", targetStr = "", roomStr = "";
+					
+					if(ratio < 0.25)
+					{
+						attackStr = "You land a glancing blow on " + target.getName() + " with your " + weaponName + " for " + damage + " damage.";
+						targetStr = sender.getName() + " lands a glancing blow with their " + weaponName + " for " + damage + " damage.";
+						roomStr = sender.getName() + " lands a glancing blow on " + target.getName() + " with their " + weaponName + " for " + damage + " damage.";
+					}
+					else if(ratio < 0.95)
+					{
+						attackStr = "You hit " + target.getName() + " with your " + weaponName + " for " + damage + " damage.";
+						targetStr = sender.getName() + " hits you with their " + weaponName + " for " + damage + " damage.";
+						roomStr = sender.getName() + " hits " + target.getName() + " with their " + weaponName + " for " + damage + " damage.";
+					}
+					else
+					{
+						attackStr = "SMASH! You slam " + target.getName() + " with your " + weaponName + " for " + damage + " damage!";
+						targetStr = sender.getName() + " SLAMS you with their " + weaponName + " for " + damage + " damage!";
+						roomStr = sender.getName() + " SLAMS " + target.getName() + " with their " + weaponName + " for " + damage + " damage!";
+					}
+					
+					printSelf(attackStr);
+					
+					if(playerTarget != null)
+						Server.printToClient(targetStr, playerTarget.client);
+					
+					Server.printToRoomExcluding(roomStr, sender.getRoom(), sender, target);
+				}
+			}
+		});
+		
+		createCommand("s", "say something out loud, used to communicate with players and NPCs alike. be careful, you never know what might hear...", new Command()
 		{
 			public void invoke()
 			{
@@ -461,7 +553,7 @@ public class Commands
 	static void printSelf(String str)
 	{
 		if(str.length() > 0)
-			Server.printToClient(str.strip() + "\n\n");
+			Server.printToCurrentClient(str.strip() + "\n\n");
 	}
 	static void printDebug(String str)
 	{
