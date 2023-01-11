@@ -1,58 +1,103 @@
 package Server;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Random;
 
+import Server.Decorators.Damage;
 import Server.Decorators.PlayerControlled;
 
 public class Combat
 {
 	public Server.ScheduleTask update;
-	private ArrayList<CombatState> participants;
-	int position = 0;
+	private ArrayList<CombatState> participants = new ArrayList<CombatState>();
+	
+	private static Random rand = new Random();
 	
 	class CombatState
 	{
-		Object obj;
-		public CombatState(Object obj, String cmd) {
-			super();
+		public CombatState(Object obj, String cmd)
+		{
 			this.obj = obj;
 			this.cmd = cmd;
+			
+			lastAttack = Instant.EPOCH;
+			cooldown = 0;
 		}
+		
+		Object obj;
 		String cmd;
+		Instant lastAttack;
+		long cooldown;
 	}
 	
 	Combat(String cmd, Object sender, Object target)
 	{
 		addParticipant(target, "attack " + sender.getName());
-		addParticipant(sender, cmd);
+		CombatState initialAttack = addParticipant(sender, cmd);
+		
+		initialAttack.cooldown = 2000;
+		initialAttack.lastAttack = Instant.now();
 		
 		update = Server.schedule(new Server.ScheduleTask() {
 			public void run()
 			{
-				setTimerTask(null);
+				long longest = 0, timeSince = 0;
+				CombatState next = null;
+				for(CombatState cs : participants)
+				{
+					timeSince = Duration.between(cs.lastAttack, Instant.now()).toMillis();
+					System.out.println("examining " + cs.obj.getName() + " " + (timeSince - cs.cooldown));
+							
+					if(timeSince - cs.cooldown > longest && timeSince - cs.cooldown > 0)
+					{
+						longest = timeSince - cs.cooldown;
+						next = cs;
+					}
+				}
+				
+				if(next != null)
+				{
+					System.out.println("==> " + next.obj.getName() + " " + longest);
+					Commands.parseCommand(next.obj, next.cmd);
+					
+					next.cooldown = (long)(next.obj.findDecoratorInChildrenRecursive(Damage.class).cooldown * 1000.f);
+					next.cooldown += rand.nextInt() % (next.cooldown * 0.65);
+					next.lastAttack = Instant.now();
+					
+					Server.schedule(this, 2.5f);
+				}
+				else
+					Server.schedule(this, 0.5f);
 			}
-		}, 5.0f);
+		}, 2.5f);
 	}
 	
-	public void addParticipant(Object o, String s)
-	{
-		participants.add(position, new CombatState(o, s));
+	public CombatState addParticipant(Object o, String cmd)
+	{		
+		PlayerControlled pc;
+		for(CombatState cs : participants)
+			if((pc = cs.obj.getDecorator(PlayerControlled.class)) != null)
+				Server.printToClient(o.getName() + " enters the fray!", pc.client);
+		
+		CombatState newState = new CombatState(o, cmd);
+		participants.add(newState);
+		return newState;
 	}
 	
 	public void removeParticipant(Object o)
 	{
-		participants.remove(o);
-	}
-	
-	void start(Object sender, Object target)
-	{
-		PlayerControlled player = sender.getDecorator(PlayerControlled.class);
-		if(player != null)
-		{
-			Server.printToClient("You have the initiative and strike first!", player.client);
-		}
+		for(CombatState cs : participants)
+			if(cs.obj == o)
+			{
+				participants.remove(cs);
+				break;
+			}
 		
-		
+		PlayerControlled pc;
+		for(CombatState cs : participants)
+			if((pc = cs.obj.getDecorator(PlayerControlled.class)) != null)
+				Server.printToClient(o.getName() + " leaves the fray!", pc.client);
 	}
 }

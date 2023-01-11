@@ -196,12 +196,15 @@ public class Commands
 		createCommand("attack", "attack a target with your currently held object", new Command()
 		{
 			public void invoke()
-			{
+			{				
 				if(target != null)
 				{
+					PlayerControlled playerSender = sender.getDecorator(PlayerControlled.class);
 					PlayerControlled playerTarget = target.getDecorator(PlayerControlled.class);
 					
 					Combat combat = sender.combat;
+					
+					String fullCommand = command + " " + String.join(" ", args);
 					
 					if(combat != null)
 					{
@@ -210,12 +213,12 @@ public class Commands
 							if(target.combat == null)
 							{
 								target.combat = combat;
-								combat.addParticipant(sender, command);
+								combat.addParticipant(sender, fullCommand);
 							}
 							else
 							{
 								combat.removeParticipant(sender);
-								target.combat.addParticipant(sender, command);
+								target.combat.addParticipant(sender, fullCommand);
 							}
 							
 						}
@@ -229,24 +232,22 @@ public class Commands
 					{
 						if(target.combat == null)
 						{
-							sender.combat = new Combat(command, sender, target);
+							combat = sender.combat = new Combat(fullCommand, sender, target);
 							target.combat = sender.combat;
 							
 							printSelf("You have the initiative and strike first!");
 						}
 						else
 						{
-							target.combat.addParticipant(sender, command);
-							sender.combat = target.combat;
+							target.combat.addParticipant(sender, fullCommand);
+							combat = sender.combat = target.combat;
 						}
 					}
 					
-					Holder holder = sender.findDecoratorInChildren(Holder.class);
-					Damage weapon = holder.obj.findDecoratorInChildren(Damage.class);
-					String weaponName = weapon == null ? "bare " + holder.obj.getName() : weapon.obj.getName();
-					float maxDamage = weapon == null ? holder.damage : weapon.damage;
-					float damage = rand.nextInt() % (weapon == null ? holder.damage : weapon.damage);
-					float ratio = damage / maxDamage;
+					Damage weapon = sender.findDecoratorInChildrenRecursive(Damage.class);
+					String weaponName = weapon.weaponName == null ? weapon.obj.getName() : weapon.weaponName;
+					int damage = Math.abs(rand.nextInt()) % weapon.damage + 1;
+					float ratio = (float)damage / (float)weapon.damage;
 					
 					String attackStr = "", targetStr = "", roomStr = "";
 					
@@ -269,10 +270,11 @@ public class Commands
 						roomStr = sender.getName() + " SLAMS " + target.getName() + " with their " + weaponName + " for " + damage + " damage!";
 					}
 					
-					printSelf(attackStr);
+					if(playerSender != null)
+						Server.printToClient(attackStr, playerSender.client, false);
 					
 					if(playerTarget != null)
-						Server.printToClient(targetStr, playerTarget.client);
+						Server.printToClient(targetStr, playerTarget.client, false);
 					
 					Server.printToRoomExcluding(roomStr, sender.getRoom(), sender, target);
 				}
@@ -392,10 +394,12 @@ public class Commands
 		current.command = command;
 		current.args    = args;
 		
-		if(!words[0].equals("r")) // we have to split up the r stuff because r depends on valid target
+		PlayerControlled player = sender.getDecorator(PlayerControlled.class);
+		
+		if(player != null && !words[0].equals("r")) // we have to split up the r stuff because r depends on valid target
 		{
 			String last = target == null ? command : command + " " + target.getName();
-			sender.getDecorator(PlayerControlled.class).lastCommand = last; // eclipse breaks if we don't use last lmao
+			player.lastCommand = last; // eclipse breaks if we don't use last lmao
 			
 			if(debug)
 				System.out.println("last command saved as " + last);

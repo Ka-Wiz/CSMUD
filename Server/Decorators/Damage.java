@@ -7,6 +7,8 @@ public class Damage extends Decorator
 {
 	public int damage = 1;
 	public float cooldown = 5.f;
+	public String weaponName;
+	
 	Server.ScheduleTask attackTask = new Server.ScheduleTask()
 							{
 								public void run()

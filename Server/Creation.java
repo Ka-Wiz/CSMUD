@@ -23,7 +23,13 @@ public class Creation
 		
 		createSword(s);
 		
-		Object bri = createHuman(s);
+		for(int i = 0; i < 4; ++i)
+		{
+			Object gob = createGoblin(s);
+			gob.setName("Goblin " + (i+1));
+		}
+		
+		Object bri = createHumanoid(s);
 		bri.setName("Brian");
 		bri.setDescription("A pleasant-looking fellow with light brown hair and blue eyes.");
 		
@@ -62,7 +68,7 @@ public class Creation
 		Object woods = new Object(hub, "woods", "a thick collection of trees that is eerily silent compared to the pleasant meadow outside. Even the sun has difficulty penetrating "
 				+ "this foreboding place. There is a rough stone stairway that leads into what looks like an abandoned mine.");
 		
-		bri = createHuman(woods);
+		bri = createHumanoid(woods);
 		bri.setName("Brian");
 		bri.setDescription("A pleasant-looking fellow with light brown hair and blue eyes.");
 		
@@ -111,7 +117,7 @@ public class Creation
 	
 	public static Object createPlayer(Object storeIn, String name, ClientProcess cp)
 	{
-		Object player = createHuman(storeIn);
+		Object player = createHumanoid(storeIn);
 		player.setName(name != "" ? name : "Eric");
 		player.setDescription("You handsome devil, you.");
 		player.addDecorator(PlayerControlled.class).client = cp;
@@ -120,7 +126,7 @@ public class Creation
 		
 		return player;
 	}
-	public static Object createHuman(Object storeIn)
+	public static Object createHumanoid(Object storeIn)
 	{
 		Object body = new Object(storeIn);
 		createHands(body);
@@ -137,6 +143,11 @@ public class Creation
 		mv.setMovePriority(Movement.MovePriority.TERTIARY);
 		mv.moveString = "drag yourself";
 		
+		Damage dmg = hands.addDecorator(Damage.class);
+		dmg.damage = 2;
+		dmg.cooldown = 4.f;
+		dmg.weaponName = "fists";
+		
 		return hands;
 	}
 	public static Object createLegs(Object storeIn)
@@ -148,6 +159,20 @@ public class Creation
 		mv.moveString = "walk";
 		
 		return legs;
+	}
+	
+	public static Object createGoblin(Object storeIn)
+	{
+		Object gobbo = createHumanoid(storeIn);
+		gobbo.setName("Goblin");
+		gobbo.setDescription("Little guy. Warty green skin. Pointy ears.");
+		
+		gobbo.addDecorator(Goblin.class);
+		
+		createDagger(gobbo);
+		Commands.parseCommand(gobbo, "hold dagger");
+		
+		return gobbo;
 	}
 	
 	public static Object createClock(Object storeIn)
@@ -162,8 +187,8 @@ public class Creation
 	{
 		Object dag = new Object(storeIn, "dagger", "A rather short but deadly sharp piece of metal.");
 		Damage d = dag.addDecorator(Damage.class);
-		d.damage = 2;
-		d.cooldown = 2.5f;
+		d.damage = 4;
+		d.cooldown = 2.f;
 		return dag;
 	}
 	
@@ -171,7 +196,7 @@ public class Creation
 	{
 		Object sword = new Object(storeIn, "sword", "A moderately long, sharp piece of metal.");
 		Damage d = sword.addDecorator(Damage.class);
-		d.damage = 5;
+		d.damage = 6;
 		d.cooldown = 5.f;
 		return sword;
 	}

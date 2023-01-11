@@ -1,8 +1,5 @@
 package Server.Decorators;
 
-import java.time.LocalTime;
-
-import Server.Command;
 import Server.Commands;
 import Server.Decorator;
 import Server.Object;
@@ -23,23 +20,23 @@ public class Goblin extends Decorator
 				PlayerControlled pc = obj.getRoom().findDecoratorInChildren(PlayerControlled.class);
 				
 				if(pc == null)
-					Server.schedule(this, 7.0f);
+					Server.schedule(this, 4.f + obj.organicRandomFloat(2.0f));
 				else
 				{
 					target = pc.obj;
 					
 					Server.printToClient(obj.getName() + " notices you and lets out a shriek!", pc.client);
-					obj.printRoom(obj.getName() + " notices " + target.getName() + " and lets out a shriek!");
+					Server.printToRoomExcluding(obj.getName() + " notices " + target.getName() + " and lets out a shriek!", obj.getRoom(), target);
 					
 					playerCombat = Server.schedule(new Server.ScheduleTask() {
 						public void run()
 						{
-							
+							Commands.parseCommand(obj, "attack " + target.getName());
 						}
-					}, 2.0f);
+					}, 1.0f + obj.organicRandomFloat(2.0f));
 				}
 			}
-		}, 5.0f);
+		}, 4.0f);
 		
 //		commandStrings.put("write", new Command()
 //		{

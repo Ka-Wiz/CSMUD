@@ -57,10 +57,11 @@ public class Server
 	public static class ScheduleTask
 	{
 		private TimerTask tt;
-		public void setTimerTask(TimerTask t) { tt = t; }
-		public boolean isScheduled() { return tt != null; } // no guarantee tt is nulled after running, but mostly used for resetting periodic tasks via cancel()
-		public void run() {};
+		private void runImpl() { tt = null; run(); }	// implementation which does necessary cleanup for isScheduled() checks
+
+		public void run() {};	// actual function user should override
 		public void cancel() { tt.cancel(); tt = null; }
+		public boolean isScheduled() { return tt != null; }
 	}
 	public static ScheduleTask schedule(ScheduleTask task, float delay)
 	{
@@ -70,7 +71,7 @@ public class Server
 	        	try
 	    		{
 	    			lock.writeLock().lock();
-	    			task.run();
+	    			task.runImpl();
 	    		}
 	    		catch(Exception e)
 	    		{
@@ -82,7 +83,7 @@ public class Server
 	    		}
 	        }
 	    };
-	    task.setTimerTask(tt);
+	    task.tt = tt;
 	    
 	    timer.schedule(tt, (long)(delay * 1000.f));
 	    return task;
@@ -121,7 +122,6 @@ public class Server
 			
 			Server.curClient = cp;
 			Commands.parseCommand(cp.account.controlling, command);
-			Server.curClient = null;
 		}
 		catch(Exception e)
 		{
@@ -130,6 +130,7 @@ public class Server
 		}
 		finally
 		{
+			Server.curClient = null;
 			lock.writeLock().unlock();
 		}
 	}
@@ -175,6 +176,7 @@ public class Server
 		}
 		finally
 		{
+			Server.curClient = null;
 			lock.writeLock().unlock();
 		}
 	}
@@ -249,6 +251,7 @@ public class Server
 		}
 		finally
 		{
+			Server.curClient = null;
 			lock.writeLock().unlock();
 		}
 	}
@@ -277,6 +280,7 @@ public class Server
 		}
 		finally
 		{
+			Server.curClient = null;
 			lock.writeLock().unlock();
 		}
 	}
@@ -299,6 +303,17 @@ public class Server
 		try
 		{
 			cli.dos.writeUTF(msg.strip() + "\n\n");
+		}
+		catch (IOException e)
+		{
+			e.printStackTrace();
+		}
+	}
+	public static void printToClient(String msg, ClientProcess cli, boolean space)
+	{
+		try
+		{
+			cli.dos.writeUTF(msg.strip() + "\n");
 		}
 		catch (IOException e)
 		{

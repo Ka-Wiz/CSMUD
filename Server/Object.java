@@ -2,6 +2,7 @@ package Server;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Random;
 
 public class Object
 {	
@@ -12,6 +13,10 @@ public class Object
 	public Object(String name, String desc) { Initialize(); setName(name); setDescription(desc); }
 	public Object(Object in, String name, String desc) { Initialize(); setName(name); setDescription(desc); storeIn(in); }
 	void Initialize() {};
+	
+	private static Random rand = new Random();
+	public float organicRandomFloat(float range) { return rand.nextFloat() * range; }
+	public int organicRandomInt(int range) { return rand.nextInt() % range; }
 	
 	// OBJECT INFO ===========================
 	private String name = "Object";
@@ -239,6 +244,19 @@ public class Object
 		for(Object o : contents)
 			if((dec = o.getDecorator(d)) != null)
 				break;
+		
+		return dec;
+	}
+	public <D extends Decorator> D findDecoratorInChildrenRecursive(Class<D> d) // will return deepest found
+	{
+		D dec = null;
+		
+		for(Object o : contents)
+			if((dec = o.findDecoratorInChildrenRecursive(d)) != null)
+				return dec;	
+		
+		if((dec = getDecorator(d)) != null)
+			return dec;
 		
 		return dec;
 	}
