@@ -11,6 +11,8 @@ import Server.Decorators.PlayerControlled;
 public class Combat
 {
 	public Server.ScheduleTask update;
+	public float roundTime = 2.5f;
+	
 	private ArrayList<CombatState> participants = new ArrayList<CombatState>();
 	
 	private static Random rand = new Random();
@@ -43,35 +45,39 @@ public class Combat
 		update = Server.schedule(new Server.ScheduleTask() {
 			public void run()
 			{
-				long longest = 0, timeSince = 0;
+				long longest = Long.MIN_VALUE, timeSince = Long.MIN_VALUE;
 				CombatState next = null;
 				for(CombatState cs : participants)
 				{
-					timeSince = Duration.between(cs.lastAttack, Instant.now()).toMillis();
-					System.out.println("examining " + cs.obj.getName() + " " + (timeSince - cs.cooldown));
+					timeSince = Duration.between(cs.lastAttack, Instant.now()).toMillis() - cs.cooldown;
+					
+					if(Server.checkDebug(Server.DBG_CBT))
+						System.out.println("examining " + cs.obj.getName() + " " + timeSince);
 							
-					if(timeSince - cs.cooldown > longest && timeSince - cs.cooldown > 0)
+					if(timeSince > longest && timeSince > 0)
 					{
-						longest = timeSince - cs.cooldown;
+						longest = timeSince;
 						next = cs;
 					}
 				}
 				
 				if(next != null)
 				{
-					System.out.println("==> " + next.obj.getName() + " " + longest);
+					if(Server.checkDebug(Server.DBG_CBT))
+						System.out.println("==> " + next.obj.getName() + " " + longest);
+					
 					Commands.parseCommand(next.obj, next.cmd);
 					
 					next.cooldown = (long)(next.obj.findDecoratorInChildrenRecursive(Damage.class).cooldown * 1000.f);
 					next.cooldown += rand.nextInt() % (next.cooldown * 0.65);
 					next.lastAttack = Instant.now();
 					
-					Server.schedule(this, 2.5f);
+					Server.schedule(this, roundTime);
 				}
 				else
-					Server.schedule(this, 0.5f);
+					Server.schedule(this, roundTime * 0.25f);
 			}
-		}, 2.5f);
+		}, roundTime);
 	}
 	
 	public CombatState addParticipant(Object o, String cmd)

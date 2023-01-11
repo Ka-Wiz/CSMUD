@@ -275,7 +275,8 @@ public class Object
 	private int integrity = 100;
 	
 	public int getIntegrity() { return integrity; }
-	public void changeIntegrityBy(int chg) { integrity += chg; }
+	public void changeIntegrityBy(int chg) { integrity += chg; if(integrity < 0) die(); }
+	void die() {};
 	
 	// =================================================
 	

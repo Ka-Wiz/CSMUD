@@ -405,6 +405,7 @@ public class Server
 	static final int DBG_INV = 1;
 	static final int DBG_CMD = 2;
 	static final int DBG_LGN = 4;
+	static final int DBG_CBT = 8;
 	static int debugFlags = 0;
 	static boolean checkDebug(int flag) { return (debugFlags & flag) > 0; }
 }
