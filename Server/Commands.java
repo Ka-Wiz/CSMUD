@@ -20,6 +20,7 @@ public class Commands
 	public static Object sender, target;
 	public static String command;
 	public static String[] args;
+	public static String fullCommand;
 	
 	private static Random rand;
 	
@@ -28,6 +29,7 @@ public class Commands
 		Object sender, target;
 		String command;
 		String[] args;
+		String fullCommand;
 	}
 	
 	private static Stack<CommandState> states = new Stack<>();
@@ -69,6 +71,8 @@ public class Commands
 						printDebug("target wasnt null");
 				
 				printSelf(str + target.buildDescription());
+				
+				Commands.parseCommand(sender, "think");
 			}
 		});
 		
@@ -194,55 +198,63 @@ public class Commands
 		});
 		
 		createCommand("attack", "attack a target with your currently held object", new Command()
-		{
+		{	// attack command just covers individual attacks, overall combat timing is Combat class
 			public void invoke()
 			{				
 				if(target != null)
 				{
+					if(target.isDefeated())
+					{
+						printSelf("You cannot attack a target that is already defeated.");
+						return;
+					}
+					
 					PlayerControlled playerSender = sender.getDecorator(PlayerControlled.class);
 					PlayerControlled playerTarget = target.getDecorator(PlayerControlled.class);
 					
+					// COMBAT SESSION LOGIC ===================================================================
+					
 					Combat combat = sender.combat;
-					
-					String fullCommand = command + " " + String.join(" ", args);
-					
-					if(combat != null)
+					if(combat != null)	// if the sender is in combat
 					{
-						if(combat != target.combat)
+						if(combat != target.combat)		// if it's a different combat than the target
 						{
-							if(target.combat == null)
+							if(target.combat == null)	// if the target isn't in combat, add it to sender's
 							{
 								target.combat = combat;
 								combat.addParticipant(sender, fullCommand);
 							}
-							else
+							else	// if target in combat, have sender escape current and join target's
 							{
-								combat.removeParticipant(sender);
+								combat.removeParticipant(sender, true);
 								target.combat.addParticipant(sender, fullCommand);
 							}
 							
 						}
-						else if(combat.update.isScheduled())
+						else if(combat.update.isScheduled())	// if both in same combat and between rounds, update sender attack command
 						{
-							printSelf("You are looking for your chance...");
+							printSelf("You decide to " + fullCommand + " next!");
+							combat.changeCommand(sender, fullCommand);
 							return;
 						}
 					}
 					else
 					{
-						if(target.combat == null)
+						if(target.combat == null)	// if we and the target are both not in combat, create it
 						{
 							combat = sender.combat = new Combat(fullCommand, sender, target);
 							target.combat = sender.combat;
 							
 							printSelf("You have the initiative and strike first!");
 						}
-						else
+						else	// if the target is in combat, join it
 						{
 							target.combat.addParticipant(sender, fullCommand);
 							combat = sender.combat = target.combat;
 						}
 					}
+					
+					// DAMAGE CALCULATION ===================================================================
 					
 					Damage weapon = sender.findDecoratorInChildrenRecursive(Damage.class);
 					String weaponName = weapon.weaponName == null ? weapon.obj.getName() : weapon.weaponName;
@@ -277,6 +289,17 @@ public class Commands
 						Server.printToClient(targetStr, playerTarget.client, false);
 					
 					Server.printToRoomExcluding(roomStr, sender.getRoom(), sender, target);
+					
+					target.changeIntegrityBy(-damage);
+					
+					if(target.isDefeated())
+					{
+						// way to decide next target, faction system?
+					}
+				}
+				else
+				{
+					printSelf("That is not a valid target for attack.");
 				}
 			}
 		});
@@ -337,8 +360,10 @@ public class Commands
 		target  = null;
 		command = null;
 		args    = null;
+		fullCommand = null;
 		
 		sender = send;
+		fullCommand = input;
 		
 		boolean debug = Server.checkDebug(Server.DBG_CMD);
 		if(debug)
@@ -357,6 +382,8 @@ public class Commands
 		
 		words = input.split(" ");
 		
+		// == TARGET SELECTION ================================================================================
+		
 		int wordsInTarget = 0;
 		if(words.length > 1)
 		{
@@ -367,24 +394,38 @@ public class Commands
 				wordsInTarget = 1;
 			}
 			else
-				for(int i = 2; i < 4; ++i)
+				for(int i = Math.min(words.length - 1, 3); i >= 1; --i)
 				{
+					targName = "";
+					for(int j = 1; j <= i; ++j)
+						targName += words[j] + " ";
+					targName = targName.strip();
+					
 					target = getTargetFromContext(sender, targName);
 					
-					if(target == null && i < words.length)
-						targName += " " + words[i];
-					else
+					if(target != null)
 					{
-						if(i < words.length)
-							wordsInTarget = i - 1;
-						
+						System.out.println("target is " + target.getName() + " which is " + i + " words");
+						wordsInTarget = i;
 						break;
 					}
+					
+//					if(target == null && i < words.length)
+//						targName += " " + words[i];
+//					else
+//					{
+//						if(i < words.length)
+//							wordsInTarget = i - 1;
+//						
+//						break;
+//					}
 				}
 		}
 		
 		if(debug)
 			System.out.println("target name is " + wordsInTarget + " words");
+		
+		// == STATE SETUP ================================================================================
 		
 		command = words[0];
 		args = Arrays.copyOfRange(words, 1 + wordsInTarget, words.length);
@@ -393,9 +434,11 @@ public class Commands
 		current.target  = target;
 		current.command = command;
 		current.args    = args;
+		current.fullCommand = fullCommand;
+		
+		// == COMMAND REPETITION =========================================================================
 		
 		PlayerControlled player = sender.getDecorator(PlayerControlled.class);
-		
 		if(player != null && !words[0].equals("r")) // we have to split up the r stuff because r depends on valid target
 		{
 			String last = target == null ? command : command + " " + target.getName();
@@ -404,6 +447,8 @@ public class Commands
 			if(debug)
 				System.out.println("last command saved as " + last);
 		}
+		
+		// == COMMAND OWNERSHIP ==========================================================================
 		
 		Command cmd;
 		boolean found = false;
@@ -463,7 +508,8 @@ public class Commands
 			}
 		}
 		
-		// cleanup for next command environment
+		// == STATE CLEANUP ==========================================================================
+		
 		if(!states.empty())
 		{
 			current = states.pop();
@@ -472,77 +518,11 @@ public class Commands
 			target  = current.target;
 			command = current.command;
 			args    = current.args;
+			fullCommand = current.fullCommand;
 			
 			if(states.empty())
 				current = null;
 		}
-
-//		Command cmd = commandStrings.get(words[0]);
-//		if(cmd != null)
-//		{
-//			if(targ != null)
-//			{
-//				if(debug)
-//					System.out.println("specific cmd " + words[0] + " on " + words[1] + ", invoking with " + args.length + " args" );
-//				
-//				Command scmd = targ.getCommand(words[0]);
-//				if(scmd != null)
-//				{
-//					scmd.invoke();
-//					return;
-//				}
-//			}
-//			
-//			if(debug)
-//				System.out.println("generic cmd " + words[0] + ", invoking with " + args.length + " args" );
-//			
-//			cmd.invoke();
-//			
-//			if(debug)
-//				System.out.println("cmd " + words[0] + " complete");
-//		}
-//		else
-//		{
-//			if(debug)
-//				System.out.println("checking for specific");
-//			
-//			if(targ != null)
-//			{
-//				cmd = targ.commandStrings.get(words[0]);
-//				
-//				if(cmd != null)
-//				{
-//					if(debug)
-//						System.out.println(targ.getName() + " recognized " + words[0] + " invoking with " + (args.length-1) + " args" );
-//					
-//					Commands.args = Arrays.copyOfRange(words, 2, words.length);
-//					cmd.invoke();
-//				}
-//				else
-//				{
-//					boolean invoked = false;
-//					for(var entry : targ.getDecorators().entrySet())
-//					{
-//						cmd = entry.getValue().commandStrings.get(words[0]);
-//						if(cmd != null)
-//						{
-//							if(debug)
-//								System.out.println(targ.getName() + " decorator " + entry.getKey() + " recognized " + words[0] + " invoking with " + (args.length-1) + " args" );
-//							
-//							Commands.args = Arrays.copyOfRange(words, 2, words.length);
-//							cmd.invoke();
-//							invoked = true;
-//							break;
-//						}
-//					}
-//					
-//					if(!invoked)
-//						printSelf("You can't think of a way to " + words[0] + " a " + targ.getName() + ".");
-//				}
-//			}
-//			else
-//				printSelf("You don't know how to " + words[0] + ".");
-//		}
 	}
 	
 	private static Object getTargetFromContext(Object o, String s)

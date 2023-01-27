@@ -313,7 +313,7 @@ public class Server
 	{
 		try
 		{
-			cli.dos.writeUTF(msg.strip() + "\n");
+			cli.dos.writeUTF(msg.strip() + "\n\n");
 		}
 		catch (IOException e)
 		{

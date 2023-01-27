@@ -23,11 +23,8 @@ public class Creation
 		
 		createSword(s);
 		
-		for(int i = 0; i < 4; ++i)
-		{
-			Object gob = createGoblin(s);
-			gob.setName("Goblin " + (i+1));
-		}
+		for(int i = 0; i < 3; ++i)
+			createGoblin(s);
 		
 		Object bri = createHumanoid(s);
 		bri.setName("Brian");
@@ -166,6 +163,7 @@ public class Creation
 		Object gobbo = createHumanoid(storeIn);
 		gobbo.setName("Goblin");
 		gobbo.setDescription("Little guy. Warty green skin. Pointy ears.");
+		gobbo.setMaxIntegrity(10);
 		
 		gobbo.addDecorator(Goblin.class);
 		

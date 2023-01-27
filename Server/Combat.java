@@ -11,8 +11,7 @@ import Server.Decorators.PlayerControlled;
 public class Combat
 {
 	public Server.ScheduleTask update;
-	public float roundTime = 2.5f;
-	
+	public float roundTime = 2.25f;
 	private ArrayList<CombatState> participants = new ArrayList<CombatState>();
 	
 	private static Random rand = new Random();
@@ -45,11 +44,17 @@ public class Combat
 		update = Server.schedule(new Server.ScheduleTask() {
 			public void run()
 			{
+				if(participants.size() == 1)
+					return;
+				
 				long longest = Long.MIN_VALUE, timeSince = Long.MIN_VALUE;
 				CombatState next = null;
 				for(CombatState cs : participants)
 				{
-					timeSince = Duration.between(cs.lastAttack, Instant.now()).toMillis() - cs.cooldown;
+					timeSince = Duration.between(cs.lastAttack, Instant.now()).toMillis();
+//					timeSince -= (cs.cooldown + rand.nextInt() % (cs.cooldown * 0.1));
+					timeSince -= cs.cooldown + cs.cooldown * rand.nextGaussian() * 0.25d;
+					timeSince += timeSince * rand.nextGaussian() * 0.3d;
 					
 					if(Server.checkDebug(Server.DBG_CBT))
 						System.out.println("examining " + cs.obj.getName() + " " + timeSince);
@@ -69,7 +74,6 @@ public class Combat
 					Commands.parseCommand(next.obj, next.cmd);
 					
 					next.cooldown = (long)(next.obj.findDecoratorInChildrenRecursive(Damage.class).cooldown * 1000.f);
-					next.cooldown += rand.nextInt() % (next.cooldown * 0.65);
 					next.lastAttack = Instant.now();
 					
 					Server.schedule(this, roundTime);
@@ -85,14 +89,14 @@ public class Combat
 		PlayerControlled pc;
 		for(CombatState cs : participants)
 			if((pc = cs.obj.getDecorator(PlayerControlled.class)) != null)
-				Server.printToClient(o.getName() + " enters the fray!", pc.client);
+				Server.printToClient(o.getName() + " engages in battle!", pc.client);
 		
 		CombatState newState = new CombatState(o, cmd);
 		participants.add(newState);
 		return newState;
 	}
 	
-	public void removeParticipant(Object o)
+	public void removeParticipant(Object o, boolean displayMessage)
 	{
 		for(CombatState cs : participants)
 			if(cs.obj == o)
@@ -101,9 +105,22 @@ public class Combat
 				break;
 			}
 		
-		PlayerControlled pc;
+		if(displayMessage)
+		{
+			PlayerControlled pc;
+			for(CombatState cs : participants)
+				if((pc = cs.obj.getDecorator(PlayerControlled.class)) != null)
+					Server.printToClient(o.getName() + " leaves the fray!", pc.client);
+		}
+	}
+	
+	public void changeCommand(Object o, String cmd)
+	{
 		for(CombatState cs : participants)
-			if((pc = cs.obj.getDecorator(PlayerControlled.class)) != null)
-				Server.printToClient(o.getName() + " leaves the fray!", pc.client);
+			if(cs.obj == o)
+			{
+				cs.cmd = cmd;
+				return;
+			}
 	}
 }
