@@ -12,7 +12,7 @@ enum DecType
 
 abstract public class Decorator
 {
-	protected Decorator() { Initialize(); }
+	protected Decorator() {Initialize(); }
 	
 	protected void Initialize() {}
 	public Object obj;
