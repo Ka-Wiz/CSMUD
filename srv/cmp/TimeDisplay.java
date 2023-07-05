@@ -1,9 +1,9 @@
-package Server.Decorators;
+package srv.cmp;
 
-import Server.Decorator;
-import Server.Server;
+import srv.Component;
+import srv.Server;
 
-public class TimeDisplay extends Decorator
+public class TimeDisplay extends Component
 {
 	protected String buildDescription()
 	{

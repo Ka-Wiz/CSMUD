@@ -1,12 +1,14 @@
-package Server.Decorators;
+package srv.cmp;
 
-import Server.Decorator;
+import srv.Component;
 
-public class Damage extends Decorator
+public class Damage extends Component
 {
 	public int damage = 1;
 	public float cooldown = 5.f;
 	public String weaponName;
+	public String attackVerb;
+	public String criticalVerb;
 	
 	protected void Initialize()
 	{

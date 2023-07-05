@@ -1,8 +1,8 @@
-package Server.Decorators;
+package srv.cmp;
 
-import Server.Decorator;
+import srv.Component;
 
-public class Holder extends Decorator
+public class Prehensile extends Component
 {
 	public int damage = 3;
 	

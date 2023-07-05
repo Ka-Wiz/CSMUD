@@ -1,4 +1,4 @@
-package Server;
+package srv;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Stack;
 
-import Server.Decorators.Damage;
-import Server.Decorators.Holder;
-import Server.Decorators.PlayerControlled;
+import srv.cmp.Damage;
+import srv.cmp.PlayerControlled;
+import srv.cmp.Prehensile;
 
 
 public class Commands
@@ -17,7 +17,7 @@ public class Commands
 	static Map<String, Command> commandStrings = new LinkedHashMap<String, Command>();
 	static Map<String, String> commandDescriptions = new LinkedHashMap<String, String>();
 	
-	public static Object sender, target;
+	public static Entity sender, target;
 	public static String command;
 	public static String[] args;
 	public static String fullCommand;
@@ -26,7 +26,7 @@ public class Commands
 	
 	private static class CommandState
 	{
-		Object sender, target;
+		Entity sender, target;
 		String command;
 		String[] args;
 		String fullCommand;
@@ -43,17 +43,17 @@ public class Commands
 		{
 			public void invoke()
 			{
-				if(Server.checkDebug(Server.DBG_CMD))
-					printDebug("inside look");
+				if(Server.checkDebug(Server.DBG.CMD))
+					Server.printDebug("LOOK", "inside look");
 				
-				if(Server.checkDebug(Server.DBG_CMD))
-					printDebug("got target " + target);
+				if(Server.checkDebug(Server.DBG.CMD))
+					Server.printDebug("LOOK", "got target " + target);
 				
 				String str = "";
 				if(target == null)
 				{
-					if(Server.checkDebug(Server.DBG_CMD))
-						printDebug("target was null");
+					if(Server.checkDebug(Server.DBG.CMD))
+						Server.printDebug("LOOK", "target was null");
 					
 					if(args.length == 0)
 					{
@@ -67,12 +67,10 @@ public class Commands
 					}
 				}
 				else
-					if(Server.checkDebug(Server.DBG_CMD))
-						printDebug("target wasnt null");
+					if(Server.checkDebug(Server.DBG.CMD))
+						Server.printDebug("LOOK", "target wasnt null");
 				
 				printSelf(str + target.buildDescription());
-				
-				Commands.parseCommand(sender, "think");
 			}
 		});
 		
@@ -80,8 +78,8 @@ public class Commands
 		{
 			public void invoke()
 			{
-				if(Server.checkDebug(Server.DBG_CMD))
-					printDebug("inside think");
+				if(Server.checkDebug(Server.DBG.CMD))
+					Server.printDebug("THINK", "inside think");
 				
 				if(target == null)
 					printSelf(sender.containedIn.getInteractables());
@@ -99,7 +97,7 @@ public class Commands
 					str += s + " ";
 				str = str.strip();
 				
-				sender.printRoomAll(str);
+				sender.printRoomAll(sender.getName() +  " " + str);
 			}
 		});
 		
@@ -107,19 +105,19 @@ public class Commands
 		{
 			public void invoke()
 			{
-				ArrayList<Object> holders = new ArrayList<>();
+				ArrayList<Entity> holders = new ArrayList<>();
 				String contents = "You have:\n";
-				for(Object o : sender.contents)
+				for(Entity o : sender.contents)
 					if(!o.locked)
 						contents += o.getName() + "\n";
-					else if(o.getDecorator(Holder.class) != null)
+					else if(o.getComponent(Prehensile.class) != null)
 						holders.add(o);
 				
-				for(Object o : holders)
+				for(Entity o : holders)
 					if(o.contents.size() > 0)
 					{
 						contents += "\nHeld in your " + o.getName() + ":\n";
-						for(Object h : o.contents)
+						for(Entity h : o.contents)
 							contents += h.getName() + "\n";
 					}
 				
@@ -131,6 +129,14 @@ public class Commands
 		{
 			public void invoke()
 			{
+				Prehensile prh = sender.findComponentInChildrenWithPriority(Prehensile.class, 1);
+				
+				if(prh == null || prh.priority > 1)
+				{
+					printSelf("You do not have any anatomy to take that with!");
+					return;
+				}
+				
 				if(target != null && target.locked)
 				{
 					printSelf(target.lockMessage);
@@ -140,8 +146,7 @@ public class Commands
 				{
 					printSelf("You pick up the " + target.getName() + ".");
 					target.storeIn(sender);
-				}
-					
+				}		
 			}
 		});
 		
@@ -151,7 +156,7 @@ public class Commands
 			{
 				if(target == null)
 				{
-					printSelf("Could not find object to hold!");
+					printSelf("You do not see a " + args[0] + " to hold!");
 					return;
 				}
 				else
@@ -164,23 +169,23 @@ public class Commands
 					}
 				}
 				
-				Holder h = sender.findDecoratorInChildren(Holder.class);
+				Prehensile prh = sender.findComponentInChildrenWithPriority(Prehensile.class, 1);
 				
-				if(h == null)
-					printSelf("You do not have anything to hold that with!");
+				if(prh == null || prh.priority > 1)
+					printSelf("You do not have any anatomy to hold that with!");
 				else
 				{
 					String heldString = "You ";
-					if(h.obj.contents.size() > 0)
+					if(prh.ent.contents.size() > 0)
 					{
-						Object held = h.obj.contents.get(0);
+						Entity held = prh.ent.contents.get(0);
 						heldString += "put away the " + held.getName() + " and ";
 						held.storeIn(sender);
 					}
 						
-					heldString += "hold the " + target.getName() + " with your " + h.obj.getName() + ".";
+					heldString += "hold the " + target.getName() + " with your " + prh.ent.getName() + ".";
 					printSelf(heldString);
-					target.storeIn(h.obj);
+					target.storeIn(prh.ent);
 				}
 			}
 		});
@@ -209,8 +214,8 @@ public class Commands
 						return;
 					}
 					
-					PlayerControlled playerSender = sender.getDecorator(PlayerControlled.class);
-					PlayerControlled playerTarget = target.getDecorator(PlayerControlled.class);
+					PlayerControlled playerSender = sender.getComponent(PlayerControlled.class);
+					PlayerControlled playerTarget = target.getComponent(PlayerControlled.class);
 					
 					// COMBAT SESSION LOGIC ===================================================================
 					
@@ -256,8 +261,8 @@ public class Commands
 					
 					// DAMAGE CALCULATION ===================================================================
 					
-					Damage weapon = sender.findDecoratorInChildrenRecursive(Damage.class);
-					String weaponName = weapon.weaponName == null ? weapon.obj.getName() : weapon.weaponName;
+					Damage weapon = sender.findComponentInChildrenRecursive(Damage.class);
+					String weaponName = weapon.weaponName == null ? weapon.ent.getName() : weapon.weaponName;
 					int damage = Math.abs(rand.nextInt()) % weapon.damage + 1;
 					float ratio = (float)damage / (float)weapon.damage;
 					
@@ -271,15 +276,15 @@ public class Commands
 					}
 					else if(ratio < 0.95)
 					{
-						attackStr = "You hit " + target.getName() + " with your " + weaponName + " for " + damage + " damage.";
-						targetStr = sender.getName() + " hits you with their " + weaponName + " for " + damage + " damage.";
-						roomStr = sender.getName() + " hits " + target.getName() + " with their " + weaponName + " for " + damage + " damage.";
+						attackStr = "You " + weapon.attackVerb + " " + target.getName() + " with your " + weaponName + " for " + damage + " damage.";
+						targetStr = sender.getName() + " " + weapon.attackVerb + "s you with their " + weaponName + " for " + damage + " damage.";
+						roomStr = sender.getName() + " " + weapon.attackVerb + "s " + target.getName() + " with their " + weaponName + " for " + damage + " damage.";
 					}
 					else
 					{
-						attackStr = "SMASH! You slam " + target.getName() + " with your " + weaponName + " for " + damage + " damage!";
-						targetStr = sender.getName() + " SLAMS you with their " + weaponName + " for " + damage + " damage!";
-						roomStr = sender.getName() + " SLAMS " + target.getName() + " with their " + weaponName + " for " + damage + " damage!";
+						attackStr = "SMASH! You " + weapon.criticalVerb + " " + target.getName() + " with your " + weaponName + " for " + damage + " damage!";
+						targetStr = sender.getName() + " " + weapon.criticalVerb + "S you with their " + weaponName + " for " + damage + " damage!";
+						roomStr = sender.getName() + " " + weapon.criticalVerb + "S " + target.getName() + " with their " + weaponName + " for " + damage + " damage!";
 					}
 					
 					if(playerSender != null)
@@ -320,7 +325,7 @@ public class Commands
 		{
 			public void invoke()
 			{
-				Commands.parseCommand(sender, sender.getDecorator(PlayerControlled.class).lastCommand);
+				Commands.parseCommand(sender, sender.getComponent(PlayerControlled.class).lastCommand);
 			}
 		});
 		
@@ -346,7 +351,7 @@ public class Commands
 		commandDescriptions.put(text, desc);
 	}
 	
-	public static void parseCommand(Object send, String input) 
+	public static void parseCommand(Entity send, String input) 
 	{
 		// "parse" all statics for use in commands: sender, target, command, args
 		// commands can nest other commands so we need an "activation record" stack
@@ -365,9 +370,8 @@ public class Commands
 		sender = send;
 		fullCommand = input;
 		
-		boolean debug = Server.checkDebug(Server.DBG_CMD);
-		if(debug)
-			System.out.println("parsing command " + input + " from " + sender.getName());
+		if(Server.checkDebug(Server.DBG.CMD))
+			Server.printDebug("PARSE", "parsing command " + input + " from " + sender.getName());
 		
 		if(input.length() == 0)
 		{
@@ -378,7 +382,7 @@ public class Commands
 		String[] words = input.split(" ", 2);
 		
 		if(words[0].equals("r"))
-			input = input.replaceFirst("r", sender.getDecorator(PlayerControlled.class).lastCommand);
+			input = input.replaceFirst("r", sender.getComponent(PlayerControlled.class).lastCommand);
 		
 		words = input.split(" ");
 		
@@ -405,25 +409,14 @@ public class Commands
 					
 					if(target != null)
 					{
-						System.out.println("target is " + target.getName() + " which is " + i + " words");
+						if(Server.checkDebug(Server.DBG.CMD))
+							Server.printDebug("TARGET", "target is " + target.getName() + " which is " + i + " words");
+						
 						wordsInTarget = i;
 						break;
 					}
-					
-//					if(target == null && i < words.length)
-//						targName += " " + words[i];
-//					else
-//					{
-//						if(i < words.length)
-//							wordsInTarget = i - 1;
-//						
-//						break;
-//					}
 				}
 		}
-		
-		if(debug)
-			System.out.println("target name is " + wordsInTarget + " words");
 		
 		// == STATE SETUP ================================================================================
 		
@@ -438,14 +431,14 @@ public class Commands
 		
 		// == COMMAND REPETITION =========================================================================
 		
-		PlayerControlled player = sender.getDecorator(PlayerControlled.class);
+		PlayerControlled player = sender.getComponent(PlayerControlled.class);
 		if(player != null && !words[0].equals("r")) // we have to split up the r stuff because r depends on valid target
 		{
 			String last = target == null ? command : command + " " + target.getName();
 			player.lastCommand = last; // eclipse breaks if we don't use last lmao
 			
-			if(debug)
-				System.out.println("last command saved as " + last);
+			if(Server.checkDebug(Server.DBG.CMD))
+				Server.printDebug("PARSE", "last command saved as " + last);
 		}
 		
 		// == COMMAND OWNERSHIP ==========================================================================
@@ -458,18 +451,18 @@ public class Commands
 			cmd = target.getCommand(command);
 			if((cmd = target.commandStrings.get(command)) != null)
 			{
-				if(debug)
-					System.out.println(target.getName() + " recognized " + command + " invoking with " + args.length + " args" );
+				if(Server.checkDebug(Server.DBG.CMD))
+					Server.printDebug("PARSE", target.getName() + " recognized " + command + " invoking with " + args.length + " args" );
 				
 				found = true;
 			}
 			else
 			{
-				for(var entry : target.getDecorators().entrySet())
+				for(var entry : target.getComponents().entrySet())
 					if((cmd = entry.getValue().commandStrings.get(command)) != null)
 					{
-						if(debug)
-							System.out.println(target.getName() + " decorator " + entry.getKey() + " recognized " + command + " invoking with " + args.length + " args" );
+						if(Server.checkDebug(Server.DBG.CMD))
+							Server.printDebug("PARSE", target.getName() + " decorator " + entry.getKey() + " recognized " + command + " invoking with " + args.length + " args" );
 						
 						found = true;
 						break;
@@ -480,8 +473,8 @@ public class Commands
 			{
 				cmd.invoke();
 				
-				if(debug)
-					System.out.println("specific cmd " + command + " complete");
+				if(Server.checkDebug(Server.DBG.CMD))
+					Server.printDebug("PARSE", "specific cmd " + command + " complete");
 			}
 		}
 		
@@ -491,13 +484,13 @@ public class Commands
 			
 			if(cmd != null)
 			{
-				if(debug)
-					System.out.println("generic cmd " + command + ", invoking with " + args.length + " args" );
+				if(Server.checkDebug(Server.DBG.CMD))
+					Server.printDebug("PARSE", "generic cmd " + command + ", invoking with " + args.length + " args" );
 				
 				cmd.invoke();
 				
-				if(debug)
-					System.out.println("cmd " + command + " complete");
+				if(Server.checkDebug(Server.DBG.CMD))
+					Server.printDebug("PARSE", "cmd " + command + " complete");
 			}
 			else
 			{
@@ -525,10 +518,10 @@ public class Commands
 		}
 	}
 	
-	private static Object getTargetFromContext(Object o, String s)
+	private static Entity getTargetFromContext(Entity o, String s)
 	{
 		// helper function in case context scope changes later, ie "zones" where objects not in same room are visible to each other
-		Object found = o.containedIn.getContained(s);
+		Entity found = o.containedIn.getContained(s);
 		if(found == null)
 			found = sender.getContained(s, true);
 		return found;
@@ -538,10 +531,5 @@ public class Commands
 	{
 		if(str.length() > 0)
 			Server.printToCurrentClient(str.strip() + "\n\n");
-	}
-	static void printDebug(String str)
-	{
-		if(str.length() > 0)
-			System.out.println("DEBUG: " + str);
 	}
 }

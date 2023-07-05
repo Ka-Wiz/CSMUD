@@ -1,4 +1,4 @@
-package Server;
+package srv;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -89,7 +89,8 @@ public class ClientProcess implements Runnable
 			{
 				command = dis.readUTF().strip();
 				
-				System.out.println(command + " from " + account.name);
+				if(Server.checkDebug(Server.DBG.NET))
+					Server.printDebug("INPUT", command + " from " + account.name);
 				
 				if(command.equals("quit") || command.equals("exit") || command.equals("logout"))
 				{

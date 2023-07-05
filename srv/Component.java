@@ -1,4 +1,4 @@
-package Server;
+package srv;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,12 +10,12 @@ enum DecType
 	MAX
 }
 
-abstract public class Decorator
+abstract public class Component
 {
-	protected Decorator() {Initialize(); }
+	protected Component() {Initialize(); }
 	
 	protected void Initialize() {}
-	public Object obj;
+	public Entity ent;
 	
 	protected HashSet<DecType> types;
 	protected enum DecType
@@ -23,6 +23,8 @@ abstract public class Decorator
 		MOVEMENT,
 		MAX
 	}
+	
+	public int priority = 1;
 	
 	protected void OnStore() {}
 	protected String buildDescription() { return ""; }

@@ -1,12 +1,12 @@
-package Server;
+package srv;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Random;
 
-import Server.Decorators.Damage;
-import Server.Decorators.PlayerControlled;
+import srv.cmp.Damage;
+import srv.cmp.PlayerControlled;
 
 public class Combat
 {
@@ -18,7 +18,7 @@ public class Combat
 	
 	class CombatState
 	{
-		public CombatState(Object obj, String cmd)
+		public CombatState(Entity obj, String cmd)
 		{
 			this.obj = obj;
 			this.cmd = cmd;
@@ -27,13 +27,13 @@ public class Combat
 			cooldown = 0;
 		}
 		
-		Object obj;
+		Entity obj;
 		String cmd;
 		Instant lastAttack;
 		long cooldown;
 	}
 	
-	Combat(String cmd, Object sender, Object target)
+	Combat(String cmd, Entity sender, Entity target)
 	{
 		addParticipant(target, "attack " + sender.getName());
 		CombatState initialAttack = addParticipant(sender, cmd);
@@ -56,8 +56,8 @@ public class Combat
 					timeSince -= cs.cooldown + cs.cooldown * rand.nextGaussian() * 0.25d;
 					timeSince += timeSince * rand.nextGaussian() * 0.3d;
 					
-					if(Server.checkDebug(Server.DBG_CBT))
-						System.out.println("examining " + cs.obj.getName() + " " + timeSince);
+					if(Server.checkDebug(Server.DBG.CBT))
+						Server.printDebug("UPDATE", "examining " + cs.obj.getName() + " " + timeSince);
 							
 					if(timeSince > longest && timeSince > 0)
 					{
@@ -68,12 +68,12 @@ public class Combat
 				
 				if(next != null)
 				{
-					if(Server.checkDebug(Server.DBG_CBT))
-						System.out.println("==> " + next.obj.getName() + " " + longest);
+					if(Server.checkDebug(Server.DBG.CBT))
+						Server.printDebug("UPDATE", "==> " + next.obj.getName() + " " + longest);
 					
 					Commands.parseCommand(next.obj, next.cmd);
 					
-					next.cooldown = (long)(next.obj.findDecoratorInChildrenRecursive(Damage.class).cooldown * 1000.f);
+					next.cooldown = (long)(next.obj.findComponentInChildrenRecursive(Damage.class).cooldown * 1000.f);
 					next.lastAttack = Instant.now();
 					
 					Server.schedule(this, roundTime);
@@ -84,11 +84,11 @@ public class Combat
 		}, roundTime);
 	}
 	
-	public CombatState addParticipant(Object o, String cmd)
+	public CombatState addParticipant(Entity o, String cmd)
 	{		
 		PlayerControlled pc;
 		for(CombatState cs : participants)
-			if((pc = cs.obj.getDecorator(PlayerControlled.class)) != null)
+			if((pc = cs.obj.getComponent(PlayerControlled.class)) != null)
 				Server.printToClient(o.getName() + " engages in battle!", pc.client);
 		
 		CombatState newState = new CombatState(o, cmd);
@@ -96,7 +96,7 @@ public class Combat
 		return newState;
 	}
 	
-	public void removeParticipant(Object o, boolean displayMessage)
+	public void removeParticipant(Entity o, boolean displayMessage)
 	{
 		for(CombatState cs : participants)
 			if(cs.obj == o)
@@ -109,12 +109,12 @@ public class Combat
 		{
 			PlayerControlled pc;
 			for(CombatState cs : participants)
-				if((pc = cs.obj.getDecorator(PlayerControlled.class)) != null)
+				if((pc = cs.obj.getComponent(PlayerControlled.class)) != null)
 					Server.printToClient(o.getName() + " leaves the fray!", pc.client);
 		}
 	}
 	
-	public void changeCommand(Object o, String cmd)
+	public void changeCommand(Entity o, String cmd)
 	{
 		for(CombatState cs : participants)
 			if(cs.obj == o)

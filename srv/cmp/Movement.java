@@ -1,8 +1,8 @@
-package Server.Decorators;
+package srv.cmp;
 
-import Server.Decorator;
+import srv.Component;
 
-public class Movement extends Decorator
+public class Movement extends Component
 {
 	public enum MovePriority
 	{

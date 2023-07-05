@@ -1,4 +1,4 @@
-package Server;
+package srv;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -12,7 +12,7 @@ import java.util.TimerTask;
 import java.util.Vector;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import Server.Decorators.PlayerControlled;
+import srv.cmp.PlayerControlled;
 
 public class Server
 {
@@ -46,8 +46,8 @@ public class Server
 	}
 	
 	// WORLD ============================
-	static Object world = new Object();
-	static Object startingRoom = world;
+	static Entity world = new Entity();
+	static Entity startingRoom = world;
 	public static LocalTime worldTime;
 	static float worldTick = 2.5f;		// how many seconds before world time updates
 	static int worldTickMinutes = 1;	// how many minutes to advance in-game time per tick
@@ -147,7 +147,7 @@ public class Server
 			account.name = name;
 			account.password = pass;
 			
-			Object player = Creation.createPlayer(startingRoom, name, cp);
+			Entity player = Creation.createPlayer(startingRoom, name, cp);
 			player.wasIn = Server.startingRoom;
 			
 			account.controlled.add(player);
@@ -163,8 +163,8 @@ public class Server
 			else
 				player.storeIn(world);
 			
-			if(checkDebug(DBG_LGN))
-				System.out.println("account created, returning " + account.name);
+			if(checkDebug(DBG.LGN))
+				Server.printDebug("account created, returning " + account.name);
 
 			return account;
 		}
@@ -214,10 +214,10 @@ public class Server
 				{
 					if(account.client == null)
 					{
-						Object player = account.controlling;
+						Entity player = account.controlling;
 						player.storeIn(player.wasIn);
 						
-						player.getDecorator(PlayerControlled.class).client = account.client = cp;
+						player.getComponent(PlayerControlled.class).client = account.client = cp;
 						
 						printToCurrentClient("A swirling flash of multicolored light heralds your arrival into the world.");
 						printToRoom(player.getName() + " appears in a swirling flash of multicolored light.", player.containedIn);
@@ -267,8 +267,8 @@ public class Server
 				printToCurrentClient("Your view of the world quickly dissipates to nothing as you are enveloped by a multicolored light.");
 			}
 			
-			Object player = cp.account.controlling;
-			player.getDecorator(PlayerControlled.class).client = cp.account.client = null;
+			Entity player = cp.account.controlling;
+			player.getComponent(PlayerControlled.class).client = cp.account.client = null;
 			clients.remove(cp);
 			
 			printToRoom(player.getName() + " disappears in a flash of multicolored light, leaving emptiness behind.", player.containedIn);
@@ -320,9 +320,9 @@ public class Server
 			e.printStackTrace();
 		}
 	}
-	public static void printToOther(String msg, Object other)
+	public static void printToOther(String msg, Entity other)
 	{
-		PlayerControlled pc = other.getDecorator(PlayerControlled.class);
+		PlayerControlled pc = other.getComponent(PlayerControlled.class);
 		if(pc != null)
 		{
 			try
@@ -335,7 +335,7 @@ public class Server
 			}
 		}
 	}
-	public static void printToRoom(String msg, Object room)
+	public static void printToRoom(String msg, Entity room)
 	{
 		try
 		{
@@ -348,12 +348,12 @@ public class Server
 			e.printStackTrace();
 		}
 	}
-	public static void printToRoomExcluding(String msg, Object room, Object... toIgnore )
+	public static void printToRoomExcluding(String msg, Entity room, Entity... toIgnore )
 	{
 		try
 		{
 			for(ClientProcess cp : clients)
-				if(cp.account.controlling.getRoom() == room && !new ArrayList<Object>(Arrays.asList(toIgnore)).contains(cp.account.controlling))
+				if(cp.account.controlling.getRoom() == room && !new ArrayList<Entity>(Arrays.asList(toIgnore)).contains(cp.account.controlling))
 					cp.dos.writeUTF(msg.strip() + "\n\n");			
 		}
 		catch (IOException e)
@@ -361,7 +361,7 @@ public class Server
 			e.printStackTrace();
 		}
 	}
-	public static void printToRoomAll(String msg, Object room)
+	public static void printToRoomAll(String msg, Entity room)
 	{
 		try
 		{
@@ -387,7 +387,7 @@ public class Server
 				e.printStackTrace();
 			}
 	}
-	public static void broadcast(String msg, Object toIgnore)
+	public static void broadcast(String msg, Entity toIgnore)
 	{
 		for(ClientProcess cp : clients)
 			if(cp.account.controlling != toIgnore)
@@ -402,18 +402,48 @@ public class Server
 	}
 	
 	// DEBUG ============================
-	static final int DBG_INV = 1;
-	static final int DBG_CMD = 2;
-	static final int DBG_LGN = 4;
-	static final int DBG_CBT = 8;
-	static int debugFlags = 0;
-	static boolean checkDebug(int flag) { return (debugFlags & flag) > 0; }
+	public static int debugFlags = DBG.CMD.v;
+	public static String debugPrepend;
+	
+	public static enum DBG
+	{
+		INV(1),
+		CMD(2),
+		LGN(4),
+		CBT(8),
+		DLG(16),
+		NET(32);
+		
+		public final int v;
+	    
+	    private DBG(int val) { this.v = val; }
+	}
+	
+	public static boolean checkDebug(DBG dbg)
+	{
+		if((debugFlags & dbg.v) == 0)
+			return false;
+		else
+		{
+			debugPrepend = dbg.name();
+			return true;
+		}
+	}
+	
+	public static void printDebug(String cat, String msg)
+	{
+		System.out.println("DBG-" + debugPrepend + "-" + cat +  ": " + msg);
+	}
+	public static void printDebug(String msg)
+	{
+		System.out.println("DBG-" + debugPrepend + ": " + msg);
+	}
 }
 
 class PlayerAccount
 {
 	ClientProcess client;
 	String name, password;
-	ArrayList<Object> controlled = new ArrayList<Object>();
-	Object controlling;
+	ArrayList<Entity> controlled = new ArrayList<Entity>();
+	Entity controlling;
 }

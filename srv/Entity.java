@@ -1,19 +1,19 @@
-package Server;
+package srv;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
-import Server.Decorators.PlayerControlled;
+import srv.cmp.PlayerControlled;
 
-public class Object
+public class Entity
 {	
-	public Object() { Initialize(); }
-	public Object(Object in) { Initialize(); storeIn(in); }
-	public Object(String name) { Initialize(); setName(name); }
-	public Object(Object in, String name) { Initialize(); setName(name); storeIn(in); }
-	public Object(String name, String desc) { Initialize(); setName(name); setDescription(desc); }
-	public Object(Object in, String name, String desc) { Initialize(); setName(name); setDescription(desc); storeIn(in); }
+	public Entity() { Initialize(); }
+	public Entity(Entity in) { Initialize(); storeIn(in); }
+	public Entity(String name) { Initialize(); setName(name); }
+	public Entity(Entity in, String name) { Initialize(); setName(name); storeIn(in); }
+	public Entity(String name, String desc) { Initialize(); setName(name); setDescription(desc); }
+	public Entity(Entity in, String name, String desc) { Initialize(); setName(name); setDescription(desc); storeIn(in); }
 	void Initialize() {};
 	
 	private static Random rand = new Random();
@@ -31,7 +31,7 @@ public class Object
 	{
 		String desc = description;
 		
-		for(var entry : decorators.entrySet())
+		for(var entry : components.entrySet())
 			desc += entry.getValue().buildDescription();
 		
 		for(var entry : descriptionModifiers.entrySet())
@@ -54,20 +54,20 @@ public class Object
 	public void setLocked(String s) { lockMessage = s; locked = true; }
 	
 	// CONTAINMENT ===========================
-	public ArrayList<Object> contents = new ArrayList<Object>();
-	private HashMap<String, ArrayList<Object>> contentsByName = new HashMap<>();
+	public ArrayList<Entity> contents = new ArrayList<Entity>();
+	private HashMap<String, ArrayList<Entity>> contentsByName = new HashMap<>();
 	private int namedIndex = 0;
 	
-	public Object containedIn;
-	Object wasIn;
+	public Entity containedIn;
+	Entity wasIn;
 	public String containmentPreposition = "in";	// you are "in", "on", "under", etc
 	
 	boolean locked;
 	String lockMessage = "You cannot take that object.";
 	
-	public Object getContained(String str, boolean recurse)
+	public Entity getContained(String str, boolean recurse)
 	{
-		if(Server.checkDebug(Server.DBG_INV))
+		if(Server.checkDebug(Server.DBG.INV))
 		{
 			String s = "inv:\n";
 			for(int i = 0; i < contents.size(); ++i)
@@ -77,7 +77,7 @@ public class Object
 			for(int i = 0; i < contents.size(); ++i)
 				s += contentsByName.keySet().toArray()[i] + "\n";
 			
-			printSelf(s);
+			Server.printDebug("CONTAINED", s);
 		}
 		
 		str = str.toLowerCase();
@@ -101,14 +101,14 @@ public class Object
 			}
 		}
 
-		ArrayList<Object> named = contentsByName.get(str);
+		ArrayList<Entity> named = contentsByName.get(str);
 		
 		if(named != null && idx < named.size())
 			return named.get(idx);
 		else if(recurse)
 		{
-			Object found = null;
-			for(Object o : contents)
+			Entity found = null;
+			for(Entity o : contents)
 				if((found = o.getContained(str, recurse)) != null)
 					break;
 			
@@ -117,11 +117,11 @@ public class Object
 		else
 			return null;
 	}
-	public Object getContained(String str)
+	public Entity getContained(String str)
 	{
 		return getContained(str, false);
 	}
-	public void storeIn(Object targ)
+	public void storeIn(Entity targ)
 	{
 		if(containedIn != null)
 		{
@@ -136,12 +136,12 @@ public class Object
 		targ.addContentName(this);
 		containedIn = targ;
 	}
-	private void addContentName(Object obj)
+	private void addContentName(Entity obj)
 	{
 		String lowName = obj.name.toLowerCase();
-		ArrayList<Object> named = contentsByName.get(lowName);
+		ArrayList<Entity> named = contentsByName.get(lowName);
 		if(named == null)
-			contentsByName.put(lowName, named = new ArrayList<Object>());
+			contentsByName.put(lowName, named = new ArrayList<Entity>());
 		else
 		{
 			obj.namedIndex = named.size() + 1;
@@ -149,10 +149,10 @@ public class Object
 		}
 		named.add(obj);
 	}
-	private void removeContentName(Object obj)
+	private void removeContentName(Entity obj)
 	{
 		String lowName = obj.name.toLowerCase();
-		ArrayList<Object> named = contentsByName.get(lowName);
+		ArrayList<Entity> named = contentsByName.get(lowName);
 		named.remove(obj);
 		if(named.size() == 0)
 			contentsByName.remove(lowName);
@@ -163,7 +163,7 @@ public class Object
 				for(int i = 0; i < named.size(); ++i)
 					named.get(i).namedIndex = i + 1;
 	}
-	private void changeContentName(Object obj, String newName)
+	private void changeContentName(Entity obj, String newName)
 	{
 		removeContentName(obj);
 		obj.name = newName;
@@ -193,14 +193,14 @@ public class Object
 		
 		return ntr;
 	}
-	public Object getRoom()
+	public Entity getRoom()
 	{
 		return containedIn;
 	}
 	
 	// COMMANDS ==============================
-	HashMap<String, ArrayList<Object>> preListeners;
-	HashMap<String, ArrayList<Object>> postListeners;
+	HashMap<String, ArrayList<Entity>> preListeners;
+	HashMap<String, ArrayList<Entity>> postListeners;
 	
 	HashMap<String, Command> commandStrings = new HashMap<String, Command>();
 	
@@ -210,7 +210,7 @@ public class Object
 		if(c != null)
 			return c;
 		else
-			for(var entry : decorators.entrySet())
+			for(var entry : components.entrySet())
 				if((c = entry.getValue().commandStrings.get(commandName)) != null)
 					return c;
 		
@@ -223,7 +223,7 @@ public class Object
 		for(String s : commandStrings.keySet())
 			cmd += s + ", ";
 		
-		for(var entry : decorators.entrySet())
+		for(var entry : components.entrySet())
 			cmd += entry.getValue().GetCommands();
 		
 		if(cmd.length() > 0)
@@ -232,7 +232,8 @@ public class Object
 			cmd = (cmd.substring(0, cmd.length() - 2) + "\n");
 		}
 		else
-			cmd = "You know there is nothing special you can do with this object.";
+			cmd = "You know there is nothing special you can do with this object, however you can still try universal commands "
+					+ "like 'look " + getName() + "', 'take " + getName() + "', or 'hold " + getName() + "'.";
 		
 		return cmd;
 	}
@@ -240,77 +241,87 @@ public class Object
 	Combat combat;
 	
 	// DECORATORS ============================
-	private HashMap<Class<? extends Decorator>, Decorator> decorators = new HashMap<Class<? extends Decorator>, Decorator>();
+	private HashMap<Class<? extends Component>, Component> components = new HashMap<Class<? extends Component>, Component>();
 	
-	public HashMap<Class<? extends Decorator>, Decorator> getDecorators() { return decorators; }
-	public <D extends Decorator> D addDecorator(Class<D> d)
+	public HashMap<Class<? extends Component>, Component> getComponents() { return components; }
+	public <C extends Component> C addComponent(Class<C> c)
 	{
-		Decorator tmp = decorators.get(d);
+		Component tmp = components.get(c);
 		
 		if(tmp == null)
 			try
 			{
-				tmp = d.getDeclaredConstructor().newInstance();
-				tmp.obj = this;
-				decorators.put(d, tmp);
-				return d.cast(tmp);
+				tmp = c.getDeclaredConstructor().newInstance();
+				tmp.ent = this;
+				components.put(c, tmp);
+				return c.cast(tmp);
 			}
 			catch(Exception e) { e.printStackTrace(); return null;}
 		else
 			return null;
 	}
-	public <D extends Decorator> D addDecorator(D d)
+	public <C extends Component> C addComponent(C c)
 	{
-		Decorator tmp = decorators.get(d.getClass());
+		Component tmp = components.get(c.getClass());
 		
 		if(tmp == null)
 			try
 			{
-				d.obj = this;
-				decorators.put(d.getClass(), d);
-				return (D)d;
+				c.ent = this;
+				components.put(c.getClass(), c);
+				return (C)c;
 			}
 			catch(Exception e) { e.printStackTrace(); return null;}		
 		else
 			return null;
 	}
-	public <D extends Decorator> D getDecorator(Class<D> d)
+	public <C extends Component> C getComponent(Class<C> c)
 	{
-		Decorator tmp = decorators.get(d);
-		if(tmp == null)
+		Component cmp = components.get(c);
+		if(cmp == null)
 			return null;
 		
-		return d.cast(tmp);
+		return c.cast(cmp);
 	}
-	public <D extends Decorator> D findDecoratorInChildren(Class<D> d)
+	public <C extends Component> C findComponentInChildren(Class<C> c)
 	{
-		D dec = null;
-		for(Object o : contents)
-			if((dec = o.getDecorator(d)) != null)
+		C dec = null;
+		for(Entity e : contents)
+			if((dec = e.getComponent(c)) != null)
 				break;
 		
 		return dec;
 	}
-	public <D extends Decorator> D findDecoratorInChildrenRecursive(Class<D> d) // will return deepest found
+	public <C extends Component> C findComponentInChildrenWithPriority(Class<C> c, int p)
 	{
-		D dec = null;
+		C cmp = null, candidate = null;
+		for(Entity e : contents)
+			if((candidate = e.getComponent(c)) != null && candidate.priority <= p)
+				if(cmp == null || candidate.priority < cmp.priority)
+					cmp = candidate;
 		
-		for(Object o : contents)
-			if((dec = o.findDecoratorInChildrenRecursive(d)) != null)
+		return cmp;
+	}
+	public <C extends Component> C findComponentInChildrenRecursive(Class<C> c) // will return deepest found
+	{
+		C dec = null;
+		
+		for(Entity e : contents)
+			if((dec = e.findComponentInChildrenRecursive(c)) != null)
 				return dec;	
 		
-		if((dec = getDecorator(d)) != null)
+		if((dec = getComponent(c)) != null)
 			return dec;
 		
 		return dec;
 	}
-	public void removeDecorator(Class<? extends Decorator> d)
+	public void removeComponent(Class<? extends Component> c)
 	{
-		decorators.remove(d);
+		components.remove(c);
 	}
-	public boolean hasDecorator(Class<? extends Decorator> d)
+	public boolean hasComponent(Class<? extends Component> c)
 	{
-		Decorator dec = decorators.get(d);
+		Component dec = components.get(c);
 		
 		return dec != null;
 	}
@@ -350,8 +361,8 @@ public class Object
 	
 	public class DefeatBehavior
 	{
-		Object obj;
-		DefeatBehavior(Object o) { obj = o; }
+		Entity obj;
+		DefeatBehavior(Entity o) { obj = o; }
 		
 		void alwaysOnDefeat()
 		{
@@ -366,7 +377,7 @@ public class Object
 		
 		void onDefeat()
 		{
-			if(getDecorator(PlayerControlled.class) == null)
+			if(getComponent(PlayerControlled.class) == null)
 			{
 				printRoom(getName() + " faints, defeated.");
 				obj.addDescriptionModifier("defeat", "It has fainted and is not likely to get up for a long time.");
@@ -393,7 +404,7 @@ public class Object
 		if(str.length() > 0)
 			Server.printToCurrentClient(str.strip() + "\n\n");
 	}
-	public void printOther(String str, Object other)
+	public void printOther(String str, Entity other)
 	{
 		if(str.length() > 0)
 			Server.printToCurrentClient(str.strip() + "\n\n");
@@ -403,7 +414,7 @@ public class Object
 		if(str.length() > 0)
 			Server.printToRoom(str.strip() + "\n\n", getRoom());
 	}
-	public void printRoom(String str, Object room)
+	public void printRoom(String str, Entity room)
 	{
 		if(str.length() > 0)
 			Server.printToRoom(str.strip() + "\n\n", room);

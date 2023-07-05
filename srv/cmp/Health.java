@@ -1,10 +1,10 @@
-package Server.Decorators;
+package srv.cmp;
 
-import Server.Command;
-import Server.Decorator;
-import Server.Server;
+import srv.Command;
+import srv.Component;
+import srv.Server;
 
-public class Health extends Decorator
+public class Health extends Component
 {
 	int hp = 100;
 	int regenAmount = 1;
@@ -25,7 +25,7 @@ public class Health extends Decorator
 		{
 			public void invoke()
 			{
-				obj.printSelf("You have " + hp + " health.");
+				ent.printSelf("You have " + hp + " health.");
 			}
 		});
 	}
