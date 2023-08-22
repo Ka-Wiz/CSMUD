@@ -240,7 +240,7 @@ public class Entity
 	
 	Combat combat;
 	
-	// DECORATORS ============================
+	// COMPONENT ============================
 	private HashMap<Class<? extends Component>, Component> components = new HashMap<Class<? extends Component>, Component>();
 	
 	public HashMap<Class<? extends Component>, Component> getComponents() { return components; }
@@ -291,6 +291,16 @@ public class Entity
 				break;
 		
 		return dec;
+	}
+	public <C extends Component> ArrayList<C> findAllComponentsInChildren(Class<C> c)
+	{
+		ArrayList<C> res = new ArrayList<C>();
+		C dec = null;
+		for(Entity e : contents)
+			if((dec = e.getComponent(c)) != null)
+				res.add(dec);
+		
+		return res;
 	}
 	public <C extends Component> C findComponentInChildrenWithPriority(Class<C> c, int p)
 	{

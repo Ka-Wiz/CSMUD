@@ -6,13 +6,16 @@ import java.time.Duration;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import srv.cmp.PlayerControlled;
+import srv.cmp.RoomConnection;
 
 public class Server
 {
@@ -48,6 +51,76 @@ public class Server
 	// WORLD ============================
 	static Entity world = new Entity();
 	static Entity startingRoom = world;
+	
+	static class PathStackEntry
+	{
+		RoomConnection from;
+		Entity entity;
+		PathStackEntry prev;
+		public PathStackEntry(RoomConnection from, Entity entity, PathStackEntry prev) {
+			super();
+			this.from = from;
+			this.entity = entity;
+			this.prev = prev;
+		}
+	}
+	public static ArrayList<RoomConnection> findPath(Entity from, Entity to)
+	{
+		Stack<PathStackEntry> stack = new Stack<PathStackEntry>();
+		
+		stack.add(new PathStackEntry(null, from, null));
+//		if(from.containedIn != null)
+//			stack.add(new PathStackEntry(null, from.containedIn, null));
+		
+		PathStackEntry pse = null;
+		while(stack.size() > 0)
+		{
+			pse = stack.pop();
+			
+			if(pse.entity != to)
+			{
+				if(Server.checkDebug(Server.DBG.PTH))
+					Server.printDebug("FIND", "checking " + pse.entity.getName() + " for roomconnections");
+				
+				for(var rc : pse.entity.findAllComponentsInChildren(RoomConnection.class))	
+					if(pse.from == null || rc.connectionTo != pse.from.ent)
+					{
+						if(Server.checkDebug(Server.DBG.PTH))
+							Server.printDebug("FIND", "adding connection " + rc.ent.getName() + " in " + rc.ent.containedIn.getName() + " to stack");
+						
+						stack.add(new PathStackEntry(rc, rc.connectionTo.containedIn, pse));
+					}
+					
+//				if(pse.entity.containedIn != null)
+//					for(var rc : pse.entity.containedIn.findAllComponentsInChildren(RoomConnection.class))
+//						stack.add(new PathStackEntry(rc, rc.ent.containedIn, pse));
+				
+				pse = null;
+			}
+			else
+				break;
+		}
+		
+		if(pse != null)
+		{
+			ArrayList<RoomConnection> path = new ArrayList<RoomConnection>();
+			
+			do
+			{
+				if(Server.checkDebug(Server.DBG.PTH))
+					Server.printDebug("PATH", "adding room " + pse.entity.getName() + " to path");
+				
+				path.add(pse.from);
+				pse = pse.prev;
+			} while(pse.entity != from);
+			
+			Collections.reverse(path);
+			
+			return path;
+		}
+		else return null;
+	}
+	
 	public static LocalTime worldTime;
 	static float worldTick = 2.5f;		// how many seconds before world time updates
 	static int worldTickMinutes = 1;	// how many minutes to advance in-game time per tick
@@ -402,7 +475,7 @@ public class Server
 	}
 	
 	// DEBUG ============================
-	public static int debugFlags = DBG.CMD.v;
+	public static int debugFlags = DBG.PTH.v;
 	public static String debugPrepend;
 	
 	public static enum DBG
@@ -412,7 +485,8 @@ public class Server
 		LGN(4),
 		CBT(8),
 		DLG(16),
-		NET(32);
+		NET(32),
+		PTH(64);
 		
 		public final int v;
 	    

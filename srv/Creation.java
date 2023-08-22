@@ -140,12 +140,14 @@ public class Creation
 		
 		connectRooms(m, mn, "branch north", "exit tunnel", "down", "up");
 		connectRooms(m, ms, "branch south", "exit tunnel", "down", "up");
+		
+		Server.findPath(s, mn);
 	}
 	
 	static void createPlayerInventory(Entity storeIn)
 	{
 		new Entity(storeIn, "deathnote", "A mysterious notebook from another dimension. Its rules are not entirely clear.").addComponent(Writeable.class);
-//		new Entity(storeIn, "TamaToy", "A cute digital pet that loves you unconditionally and needs taking care of.").addComponent(TamaToy.class);
+		new Entity(storeIn, "TamaToy", "A cute digital pet that loves you unconditionally and needs taking care of.").addComponent(TamaToy.class);
 	}
 	
 	public static Entity createPlayer(Entity storeIn, String name, ClientProcess cp)
