@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Stack;
+import java.util.ArrayDeque;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.Vector;
@@ -52,7 +52,7 @@ public class Server
 	static Entity world = new Entity();
 	static Entity startingRoom = world;
 	
-	static class PathStackEntry
+	private static class PathStackEntry
 	{
 		RoomConnection from;
 		Entity entity;
@@ -66,16 +66,16 @@ public class Server
 	}
 	public static ArrayList<RoomConnection> findPath(Entity from, Entity to)
 	{
-		Stack<PathStackEntry> stack = new Stack<PathStackEntry>();
+		ArrayDeque<PathStackEntry> q = new ArrayDeque<PathStackEntry>();
 		
-		stack.add(new PathStackEntry(null, from, null));
+		q.add(new PathStackEntry(null, from, null));
 //		if(from.containedIn != null)
 //			stack.add(new PathStackEntry(null, from.containedIn, null));
 		
 		PathStackEntry pse = null;
-		while(stack.size() > 0)
+		while(q.size() > 0)
 		{
-			pse = stack.pop();
+			pse = q.poll();
 			
 			if(pse.entity != to)
 			{
@@ -88,20 +88,18 @@ public class Server
 						if(Server.checkDebug(Server.DBG.PTH))
 							Server.printDebug("FIND", "adding connection " + rc.ent.getName() + " in " + rc.ent.containedIn.getName() + " to stack");
 						
-						stack.add(new PathStackEntry(rc, rc.connectionTo.containedIn, pse));
+						q.add(new PathStackEntry(rc, rc.connectionTo.containedIn, pse));
 					}
 					
 //				if(pse.entity.containedIn != null)
 //					for(var rc : pse.entity.containedIn.findAllComponentsInChildren(RoomConnection.class))
 //						stack.add(new PathStackEntry(rc, rc.ent.containedIn, pse));
-				
-				pse = null;
 			}
 			else
 				break;
 		}
 		
-		if(pse != null)
+		if(pse.entity == to)
 		{
 			ArrayList<RoomConnection> path = new ArrayList<RoomConnection>();
 			
